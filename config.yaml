@@ -1,0 +1,16 @@
+# Proxmox Dashboard Configuration
+proxmox:
+  host: "your-proxmox-ip:8006"
+  user: "api@pam!dashboard"
+  token: "your-api-token-here"
+
+# Flask Configuration
+flask:
+  host: "0.0.0.0"
+  port: 5000
+  debug: true
+
+# Dashboard Settings
+dashboard:
+  auto_refresh_seconds: 30
+  title: "Proxmox Container Dashboard"

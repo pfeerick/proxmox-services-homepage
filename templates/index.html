@@ -133,11 +133,32 @@
             border-top: 1px solid #eee;
         }
         
+        .quick-link.primary {
+            background: #667eea;
+            font-weight: bold;
+            padding: 8px 12px;
+            margin-right: 10px;
+        }
+        
+        .quick-link.primary:hover {
+            background: #5a67d8;
+        }
+        
+        .quick-link.ssh {
+            background: #718096;
+            font-size: 0.75em;
+        }
+        
+        .quick-link.ssh:hover {
+            background: #4a5568;
+        }
+        
         .quick-link {
             display: inline-block;
-            margin-right: 10px;
+            margin-right: 8px;
+            margin-bottom: 4px;
             padding: 4px 8px;
-            background: #667eea;
+            background: #a0aec0;
             color: white;
             text-decoration: none;
             border-radius: 4px;
@@ -146,7 +167,7 @@
         }
         
         .quick-link:hover {
-            background: #5a67d8;
+            background: #718096;
         }
         
         .refresh-button {
@@ -181,7 +202,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🖥️ Proxmox Container Dashboard</h1>
+        <h1>🖥️ {{ config.title }}</h1>
         <div class="last-updated">Last updated: {{ last_updated }}</div>
     </div>
     
@@ -209,6 +230,11 @@
                 <span class="detail-label">Status:</span>
                 <span class="status {{ container.status }}">{{ container.status }}</span>
                 
+                {% if container.service %}
+                <span class="detail-label">Service:</span>
+                <span>{{ container.service.icon }} {{ container.service.name }}</span>
+                {% endif %}
+                
                 <span class="detail-label">VMID:</span>
                 <span>{{ container.vmid }}</span>
                 
@@ -221,12 +247,20 @@
             
             {% if container.status == 'running' and container.ip != 'DHCP/Unknown' %}
             <div class="quick-links">
-                <a href="http://{{ container.ip }}:22" class="quick-link" target="_blank">SSH</a>
-                <a href="http://{{ container.ip }}:80" class="quick-link" target="_blank">HTTP</a>
-                <a href="http://{{ container.ip }}:443" class="quick-link" target="_blank">HTTPS</a>
-                <a href="http://{{ container.ip }}:8080" class="quick-link" target="_blank">8080</a>
-                <a href="http://{{ container.ip }}:8123" class="quick-link" target="_blank">8123</a>
-                <a href="http://{{ container.ip }}:8096" class="quick-link" target="_blank">8096</a>
+                {% if container.service and container.service.port %}
+                    {% set protocol = container.service.protocol or 'http' %}
+                    <a href="{{ protocol }}://{{ container.ip }}:{{ container.service.port }}" 
+                       class="quick-link primary" target="_blank">
+                        {{ container.service.icon }} Open {{ container.service.name }}
+                    </a>
+                {% else %}
+                    <!-- Fallback generic links for unknown services -->
+                    <a href="http://{{ container.ip }}:80" class="quick-link" target="_blank">HTTP</a>
+                    <a href="http://{{ container.ip }}:8080" class="quick-link" target="_blank">8080</a>
+                {% endif %}
+                
+                <!-- Always show SSH link for running containers -->
+                <a href="ssh://{{ container.ip }}:22" class="quick-link ssh" target="_blank">SSH</a>
             </div>
             {% endif %}
         </div>
