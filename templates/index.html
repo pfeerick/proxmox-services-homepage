@@ -133,6 +133,12 @@
             border-top: 1px solid #eee;
         }
         
+        .no-ip-warning {
+            color: #e53e3e;
+            font-size: 0.85em;
+            font-style: italic;
+        }
+        
         .quick-link.primary {
             background: #667eea;
             font-weight: bold;
@@ -261,6 +267,10 @@
                 
                 <!-- Always show SSH link for running containers -->
                 <a href="ssh://{{ container.ip }}:22" class="quick-link ssh" target="_blank">SSH</a>
+            </div>
+            {% elif container.status == 'running' and container.ip == 'DHCP/Unknown' %}
+            <div class="quick-links">
+                <span class="no-ip-warning">⚠️ IP address not detected - container may be using DHCP</span>
             </div>
             {% endif %}
         </div>

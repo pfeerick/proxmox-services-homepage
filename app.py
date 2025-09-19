@@ -207,6 +207,14 @@ class ProxmoxAPI:
                         # Extract IP from network config
                         ip_address = self._extract_ip_from_config(config)
                         
+                        # If no static IP found, try to get the actual IP from running container
+                        if not ip_address and container.get('status') == 'running':
+                            ip_address = self._get_actual_ip_address(node_name, vmid)
+                        
+                        # Final fallback
+                        if not ip_address:
+                            ip_address = 'DHCP/Unknown'
+                        
                         container_name = container.get('name', f'CT-{vmid}')
                         service_info = get_service_info(container_name)
                         
@@ -243,9 +251,44 @@ class ProxmoxAPI:
                     for part in parts:
                         if part.strip().startswith('ip='):
                             ip_with_subnet = part.strip()[3:]  # Remove 'ip='
-                            return ip_with_subnet.split('/')[0]  # Remove subnet mask
+                            if ip_with_subnet.lower() != 'dhcp':
+                                return ip_with_subnet.split('/')[0]  # Remove subnet mask
         
-        return 'DHCP/Unknown'
+        return None  # Return None instead of 'DHCP/Unknown' for now
+    
+    def _get_actual_ip_address(self, node_name, vmid):
+        """Get the actual IP address from the running container"""
+        try:
+            # Get the current status which includes network info
+            status_url = f"{self.base_url}/nodes/{node_name}/lxc/{vmid}/status/current"
+            headers = {"Authorization": f"PVEAPIToken={self.user}={self.token}"}
+            
+            status_response = requests.get(status_url, headers=headers, verify=False, timeout=10)
+            status_response.raise_for_status()
+            status_data = status_response.json()['data']
+            
+            # Check if there's network information in the status
+            if 'netin' in status_data or 'netout' in status_data:
+                # Try to get network interfaces
+                interfaces_url = f"{self.base_url}/nodes/{node_name}/lxc/{vmid}/interfaces"
+                interfaces_response = requests.get(interfaces_url, headers=headers, verify=False, timeout=10)
+                
+                if interfaces_response.status_code == 200:
+                    interfaces = interfaces_response.json()['data']
+                    # Look for the first non-loopback interface with an IP
+                    for interface in interfaces:
+                        if interface.get('name') != 'lo' and 'inet' in interface:
+                            ip = interface['inet']
+                            # Remove subnet mask if present
+                            if '/' in ip:
+                                ip = ip.split('/')[0]
+                            return ip
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error getting actual IP for container {vmid}: {e}")
+            return None
 
 # Initialize Proxmox API
 proxmox = ProxmoxAPI(
