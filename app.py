@@ -298,8 +298,39 @@ proxmox = ProxmoxAPI(
 )
 
 @app.route('/')
-def index():
-    """Main dashboard page"""
+def simple_homepage():
+    """Simple homepage with just running services"""
+    containers = proxmox.get_containers()
+    
+    # Filter to only running containers with known IPs and services
+    running_services = []
+    for container in containers:
+        if (container['status'] == 'running' and 
+            container['ip'] != 'DHCP/Unknown' and 
+            container['service'] and 
+            container['service']['port']):
+            
+            protocol = container['service'].get('protocol', 'http')
+            url = f"{protocol}://{container['ip']}:{container['service']['port']}"
+            
+            running_services.append({
+                'name': container['service']['name'],
+                'icon': container['service']['icon'],
+                'url': url,
+                'description': container['service']['description'],
+                'container_name': container['name']
+            })
+    
+    # Sort alphabetically by service name
+    running_services.sort(key=lambda x: x['name'].lower())
+    
+    return render_template('simple.html', 
+                         services=running_services,
+                         config=config['dashboard'])
+
+@app.route('/detailed')
+def detailed_dashboard():
+    """Detailed dashboard page with all container info"""
     containers = proxmox.get_containers()
     last_updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     return render_template('index.html', 
