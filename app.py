@@ -65,7 +65,7 @@ SERVICE_MAP = {
         'description': 'Wiki Platform'
     },
     'homer': {
-        'port': 8080,
+        'port': 8010,
         'name': 'Homer Dashboard',
         'icon': '🏠',
         'description': 'Static Dashboard'
@@ -107,12 +107,6 @@ SERVICE_MAP = {
         'description': 'Network Controller',
         'protocol': 'https'
     },
-    'fileserver': {
-        'port': 80,
-        'name': 'File Server',
-        'icon': '📁',
-        'description': 'File Sharing'
-    },
     'navidrome': {
         'port': 4533,
         'name': 'Navidrome',
@@ -120,7 +114,7 @@ SERVICE_MAP = {
         'description': 'Music Server'
     },
     'dashy': {
-        'port': 80,
+        'port': 4000,
         'name': 'Dashy Dashboard',
         'icon': '📊',
         'description': 'Dashboard'
@@ -138,7 +132,7 @@ SERVICE_MAP = {
         'description': 'Speed Test'
     },
     'pulse': {
-        'port': 8080,
+        'port': 7655,
         'name': 'Pulse',
         'icon': '💓',
         'description': 'Proxmox Monitor'
