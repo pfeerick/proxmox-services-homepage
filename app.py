@@ -47,103 +47,31 @@ def load_config():
         print(f"Error reading config.yaml: {e}")
         raise
 
-# Load configuration
-config = load_config()
+def load_services():
+    """Load service definitions from services.yaml file"""
+    services_file = os.path.join(os.path.dirname(__file__), 'services.yaml')
+    
+    if not os.path.exists(services_file):
+        print(f"Warning: {services_file} not found. Using default service definitions.")
+        # Fallback to hardcoded services if file doesn't exist
+        return {
+            'jellyfin': {'port': 8096, 'name': 'Jellyfin', 'icon': '🎬', 'description': 'Media Server'},
+            'homepage': {'port': 3000, 'name': 'Homepage', 'icon': '🏡', 'description': 'Dashboard'}
+        }
+    
+    try:
+        with open(services_file, 'r') as f:
+            services_data = yaml.safe_load(f)
+            return services_data.get('services', {})
+    except yaml.YAMLError as e:
+        print(f"Error reading services.yaml: {e}")
+        raise
 
-# Service lookup table for community script containers
-SERVICE_MAP = {
-    'paperless-ngx': {
-        'port': 8000,
-        'name': 'Paperless-NGX',
-        'icon': '📄',
-        'description': 'Document Management'
-    },
-    'wikijs': {
-        'port': 3000,
-        'name': 'Wiki.js',
-        'icon': '📖',
-        'description': 'Wiki Platform'
-    },
-    'homer': {
-        'port': 8010,
-        'name': 'Homer Dashboard',
-        'icon': '🏠',
-        'description': 'Static Dashboard'
-    },
-    'code-server': {
-        'port': 8080,
-        'name': 'VS Code Server',
-        'icon': '💻',
-        'description': 'Web-based IDE'
-    },
-    'syncthing': {
-        'port': 8384,
-        'name': 'Syncthing',
-        'icon': '🔄',
-        'description': 'File Synchronization'
-    },
-    'adguard': {
-        'port': 3000,
-        'name': 'AdGuard Home',
-        'icon': '🛡️',
-        'description': 'DNS Ad Blocker'
-    },
-    'jellyfin': {
-        'port': 8096,
-        'name': 'Jellyfin',
-        'icon': '🎬',
-        'description': 'Media Server'
-    },
-    'cloudflared': {
-        'port': None,  # No web interface
-        'name': 'Cloudflare Tunnel',
-        'icon': '☁️',
-        'description': 'Tunnel Service'
-    },
-    'unifi': {
-        'port': 8443,
-        'name': 'UniFi Controller',
-        'icon': '📶',
-        'description': 'Network Controller',
-        'protocol': 'https'
-    },
-    'navidrome': {
-        'port': 4533,
-        'name': 'Navidrome',
-        'icon': '🎵',
-        'description': 'Music Server'
-    },
-    'dashy': {
-        'port': 4000,
-        'name': 'Dashy Dashboard',
-        'icon': '📊',
-        'description': 'Dashboard'
-    },
-    'homebox': {
-        'port': 7745,
-        'name': 'Homebox',
-        'icon': '📦',
-        'description': 'Home Inventory'
-    },
-    'myspeed': {
-        'port': 5216,
-        'name': 'MySpeed',
-        'icon': '⚡',
-        'description': 'Speed Test'
-    },
-    'pulse': {
-        'port': 7655,
-        'name': 'Pulse',
-        'icon': '💓',
-        'description': 'Proxmox Monitor'
-    },
-    'homepage': {
-        'port': 3000,
-        'name': 'Homepage',
-        'icon': '🏡',
-        'description': 'Dashboard'
-    }
-}
+# Load configuration and services
+config = load_config()
+SERVICE_MAP = load_services()
+
+# Remove the hardcoded SERVICE_MAP - now loaded from services.yaml
 
 def get_service_info(container_name):
     """Get service information for a container based on its name"""
