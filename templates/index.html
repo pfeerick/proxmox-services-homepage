@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxmox Container Dashboard</title>
-    <meta http-equiv="refresh" content="30">
+    {% if not loading %}
+    <meta http-equiv="refresh" content="{{ config.auto_refresh_seconds }}">
+    {% endif %}
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -204,84 +206,246 @@
                 grid-template-columns: 1fr 1fr;
             }
         }
+        
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .error-state h2 {
+            color: #f44336;
+        }
+        
+        .retry-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .retry-btn:hover {
+            background: #5a67d8;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🖥️ {{ config.title }} - Detailed View</h1>
-        <div class="last-updated">Last updated: {{ last_updated }}</div>
+        <div class="last-updated" id="last-updated">{% if last_updated %}Last updated: {{ last_updated }}{% else %}Loading...{% endif %}</div>
         <div style="margin-top: 10px;">
             <a href="/" style="color: rgba(255,255,255,0.9); text-decoration: none;">← Back to Simple View</a>
         </div>
     </div>
     
-    <div class="stats">
-        <div class="stat-card">
-            <div class="stat-number">{{ containers|length }}</div>
-            <div>Total Containers</div>
+    <div id="loading-state" class="loading-state" {% if not loading %}style="display: none;"{% endif %}>
+        <div class="loading-spinner"></div>
+        <h2>🔄 Loading Container Information...</h2>
+        <p>Fetching data from Proxmox API...</p>
+    </div>
+    
+    <div id="error-state" class="error-state" style="display: none;">
+        <h2>❌ Failed to Load Container Data</h2>
+        <p>Could not connect to Proxmox API or fetch container information.</p>
+        <button class="retry-btn" onclick="loadContainers()">🔄 Retry</button>
+    </div>
+    
+    <div id="content-state" {% if loading %}style="display: none;"{% endif %}>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-containers">0</div>
+                <div>Total Containers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="running-containers">0</div>
+                <div>Running</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="stopped-containers">0</div>
+                <div>Stopped</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ containers|selectattr("status", "equalto", "running")|list|length }}</div>
-            <div>Running</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ containers|selectattr("status", "equalto", "stopped")|list|length }}</div>
-            <div>Stopped</div>
+        
+        <div class="container-grid" id="container-grid">
         </div>
     </div>
     
-    <div class="container-grid">
-        {% for container in containers %}
-        <div class="container-card {{ container.status }}">
-            <div class="container-name">{{ container.name }}</div>
-            
-            <div class="container-details">
-                <span class="detail-label">Status:</span>
-                <span class="status {{ container.status }}">{{ container.status }}</span>
-                
-                {% if container.service %}
-                <span class="detail-label">Service:</span>
-                <span>{{ container.service.icon }} {{ container.service.name }}</span>
-                {% endif %}
-                
-                <span class="detail-label">VMID:</span>
-                <span>{{ container.vmid }}</span>
-                
-                <span class="detail-label">Node:</span>
-                <span>{{ container.node }}</span>
-                
-                <span class="detail-label">IP Address:</span>
-                <span class="ip-address">{{ container.ip }}</span>
-            </div>
-            
-            {% if container.status == 'running' and container.ip != 'DHCP/Unknown' %}
-            <div class="quick-links">
-                {% if container.service and container.service.port %}
-                    {% set protocol = container.service.protocol or 'http' %}
-                    <a href="{{ protocol }}://{{ container.ip }}:{{ container.service.port }}" 
-                       class="quick-link primary" target="_blank">
-                        {{ container.service.icon }} Open {{ container.service.name }}
-                    </a>
-                {% else %}
-                    <!-- Fallback generic links for unknown services -->
-                    <a href="http://{{ container.ip }}:80" class="quick-link" target="_blank">HTTP</a>
-                    <a href="http://{{ container.ip }}:8080" class="quick-link" target="_blank">8080</a>
-                {% endif %}
-                
-                <!-- Always show SSH link for running containers -->
-                <a href="ssh://{{ container.ip }}:22" class="quick-link ssh" target="_blank">SSH</a>
-            </div>
-            {% elif container.status == 'running' and container.ip == 'DHCP/Unknown' %}
-            <div class="quick-links">
-                <span class="no-ip-warning">⚠️ IP address not detected - container may be using DHCP</span>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    
-    <button class="refresh-button" onclick="window.location.reload()">
+    <button class="refresh-button" onclick="loadContainers()">
         🔄 Refresh
     </button>
+    
+    <script>
+        let autoRefreshInterval;
+        const autoRefreshSeconds = {{ config.auto_refresh_seconds }};
+        
+        async function loadContainers() {
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const contentState = document.getElementById('content-state');
+            const lastUpdated = document.getElementById('last-updated');
+            
+            // Show loading state
+            loadingState.style.display = 'block';
+            errorState.style.display = 'none';
+            contentState.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/containers');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Hide loading state
+                loadingState.style.display = 'none';
+                contentState.style.display = 'block';
+                
+                // Update last updated time
+                const updateTime = new Date(data.last_updated).toLocaleString();
+                lastUpdated.textContent = `Last updated: ${updateTime}`;
+                
+                displayContainers(data.containers);
+                
+                // Start auto-refresh if not already running
+                if (autoRefreshSeconds > 0 && !autoRefreshInterval) {
+                    autoRefreshInterval = setInterval(loadContainers, autoRefreshSeconds * 1000);
+                }
+                
+            } catch (error) {
+                console.error('Error loading containers:', error);
+                
+                // Show error state
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+                contentState.style.display = 'none';
+            }
+        }
+        
+        function displayContainers(containers) {
+            const containerGrid = document.getElementById('container-grid');
+            const totalContainers = document.getElementById('total-containers');
+            const runningContainers = document.getElementById('running-containers');
+            const stoppedContainers = document.getElementById('stopped-containers');
+            
+            // Update stats
+            const running = containers.filter(c => c.status === 'running').length;
+            const stopped = containers.filter(c => c.status === 'stopped').length;
+            
+            totalContainers.textContent = containers.length;
+            runningContainers.textContent = running;
+            stoppedContainers.textContent = stopped;
+            
+            // Create container cards
+            containerGrid.innerHTML = containers.map(container => {
+                const quickLinksHtml = createQuickLinks(container);
+                const serviceInfo = container.service ? 
+                    `<span class="detail-label">Service:</span><span>${container.service.icon} ${container.service.name}</span>` : '';
+                
+                return `
+                    <div class="container-card ${container.status}">
+                        <div class="container-name">${container.name}</div>
+                        
+                        <div class="container-details">
+                            <span class="detail-label">Status:</span>
+                            <span class="status ${container.status}">${container.status}</span>
+                            
+                            ${serviceInfo}
+                            
+                            <span class="detail-label">VMID:</span>
+                            <span>${container.vmid}</span>
+                            
+                            <span class="detail-label">Node:</span>
+                            <span>${container.node}</span>
+                            
+                            <span class="detail-label">IP Address:</span>
+                            <span class="ip-address">${container.ip}</span>
+                        </div>
+                        
+                        ${quickLinksHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function createQuickLinks(container) {
+            if (container.status !== 'running') {
+                return '';
+            }
+            
+            if (container.ip === 'DHCP/Unknown') {
+                return `
+                    <div class="quick-links">
+                        <span class="no-ip-warning">⚠️ IP address not detected - container may be using DHCP</span>
+                    </div>
+                `;
+            }
+            
+            let links = '';
+            
+            if (container.service && container.service.port) {
+                const protocol = container.service.protocol || 'http';
+                links += `
+                    <a href="${protocol}://${container.ip}:${container.service.port}" 
+                       class="quick-link primary" target="_blank">
+                        ${container.service.icon} Open ${container.service.name}
+                    </a>
+                `;
+            } else {
+                // Fallback generic links for unknown services
+                links += `
+                    <a href="http://${container.ip}:80" class="quick-link" target="_blank">HTTP</a>
+                    <a href="http://${container.ip}:8080" class="quick-link" target="_blank">8080</a>
+                `;
+            }
+            
+            // Always show SSH link for running containers
+            links += `<a href="ssh://${container.ip}:22" class="quick-link ssh" target="_blank">SSH</a>`;
+            
+            return `<div class="quick-links">${links}</div>`;
+        }
+        
+        // Load containers immediately on page load
+        {% if loading %}
+        loadContainers();
+        {% endif %}
+        
+        // Clean up interval when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
 </body>
 </html>

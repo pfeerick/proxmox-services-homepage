@@ -272,7 +272,18 @@ proxmox = ProxmoxAPI()
 
 @app.route('/')
 def simple_homepage():
-    """Simple homepage with just running services"""
+    """Simple homepage with just running services - shows loading state initially"""
+    with config_lock:
+        dashboard_config = config['dashboard']
+    
+    return render_template('simple.html', 
+                         services=[],  # Start with empty services
+                         config=dashboard_config,
+                         loading=True)
+
+@app.route('/api/services')
+def api_services():
+    """JSON API endpoint for running services"""
     containers = proxmox.get_containers()
     
     # Filter to only running containers with known IPs and services
@@ -297,26 +308,23 @@ def simple_homepage():
     # Sort alphabetically by service name
     running_services.sort(key=lambda x: x['name'].lower())
     
-    with config_lock:
-        dashboard_config = config['dashboard']
-    
-    return render_template('simple.html', 
-                         services=running_services,
-                         config=dashboard_config)
+    return jsonify({
+        'services': running_services,
+        'last_updated': datetime.now().isoformat(),
+        'total': len(running_services)
+    })
 
 @app.route('/detailed')
 def detailed_dashboard():
-    """Detailed dashboard page with all container info"""
-    containers = proxmox.get_containers()
-    last_updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
+    """Detailed dashboard page with all container info - shows loading state initially"""
     with config_lock:
         dashboard_config = config['dashboard']
     
     return render_template('index.html', 
-                         containers=containers, 
-                         last_updated=last_updated,
-                         config=dashboard_config)
+                         containers=[],  # Start with empty containers
+                         last_updated=None,
+                         config=dashboard_config,
+                         loading=True)
 
 @app.route('/api/containers')
 def api_containers():
