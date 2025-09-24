@@ -270,21 +270,6 @@ class ProxmoxAPI:
 # Initialize Proxmox API
 proxmox = ProxmoxAPI()
 
-def get_service_info(container_name):
-    """Get service information for a container based on its name"""
-    with config_lock:
-        # Direct match first
-        if container_name in SERVICE_MAP:
-            return SERVICE_MAP[container_name]
-        
-        # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
-        for service_name in SERVICE_MAP:
-            if container_name.startswith(service_name):
-                return SERVICE_MAP[service_name]
-        
-        # No match found
-        return None
-
 @app.route('/')
 def simple_homepage():
     """Simple homepage with just running services"""
