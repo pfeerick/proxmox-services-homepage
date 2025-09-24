@@ -1,0 +1,86 @@
+GNU GENERAL PUBLIC LICENSE   Version 3, 29 June 2007
+
+Copyright (C) <year>  Free Software Foundation, Inc.  <http://fsf.org/>  
+Everyone is permitted to copy and distribute verbatim copies  of this license document, but changing it is not allowed.
+
+                      Preamble
+
+The GNU General Public License is a free, copyleft license for software and other kinds of works.
+
+When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure that you have freedom to distribute copies of free software (and charge for this service if you wish), that you receive source code or can get it if you want it, that you can change the software and use pieces of it in new free programs, and that you know you can do these things.
+
+To protect your rights, we need to make restrictions that forbid anyone to deny you these rights or to ask you to surrender the rights. These restrictions translate to certain responsibilities for you if you distribute copies of the software, or if you modify it.
+
+For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these terms so they know their rights.
+
+We protect your rights with two steps: (1) copyright the software, and (2) offer you this license which gives you legal permission to copy, distribute and/or modify the software.
+
+Also, for each author’s protection and ours, we want to make sure that everyone understands that there is no warranty for this free software. If the software is modified by someone else and passed on, we want its recipients to know that what they have is not the original, so that any problems introduced by others will not reflect on the original authors’ reputations.
+
+Finally, any free program is threatened constantly by software patents. We wish to avoid the danger that redistributors of a free program will collectively obtain patent licenses that deny you the right to redistribute the program. To prevent this, we have made it clear that any patent must be licensed for everyone’s free use or not licensed at all.
+
+This license, therefore, is the best way for us to protect this freedom for everyone. This is why we use it.
+
+                       A. TERMS AND CONDITIONS
+
+0. Definitions.
+
+"This License" refers to version 3 of the GNU General Public License.
+
+"Copyright" also means copyright-like laws that apply to other kinds of works, such as semiconductor masks.
+
+"The Program" refers to any copyrightable work licensed under this License. Each licensee is addressed as "you". "Licensees" and "recipients" may be individuals or organizations.
+
+To "modify" a work means to copy it or adapt it to create a derivative work. A derivative work is a work based on the Program or on another work that is itself a derivative work.  "You" means anyone who modifies the Program.  "Your" has a corresponding meaning.
+
+"Source code" for a work means the preferred form of the work for making modifications to it. For a executable work, complete source code means all the source code for all modules it contains, plus any associated interface definition files, plus the scripts used to control compilation and installation of the executable.
+
+"Object code" means any non-source form of a work.
+
+1. Source Code.
+
+The Program is licensed as a whole, and it must be distributed as a whole. Its source code must be made available to all recipients, and all recipients must be allowed to modify it. The Program must not be distributed in object code form except in conjunction with the source code. You may not impose any further restrictions on the rights granted by this License.
+
+2. Basic Permissions.
+
+You may use the Program in any way you want, including running it, modifying it, and distributing it. You may distribute copies of the Program without modification, and you may distribute modified versions of the Program under the same terms as this License.
+
+3. Copyleft.
+
+You must distribute all copies of the Program in the same manner as the original, and you must pass on the same rights to all recipients. You must ensure that they receive a copy of this License along with the Program, and you must not impose any further restrictions on their exercise of these rights.
+
+4. Distribution of Modified Versions.
+
+You may distribute modified versions of the Program under the same terms as this License, provided that you include a prominent notice stating that you have changed the Program and the date of the change.
+
+5. No Warranty.
+
+The Program is distributed without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose. See section 11 for details.
+
+6. Limitation of Liability.
+
+In no event will any author or distributor of the Program be liable to you for damages, including any general, special, incidental or consequential damages arising out of the use or inability to use the Program (including but not limited to loss of data or data being rendered inaccurate or losses sustained by you or third parties or a failure of the Program to operate with any other programs).
+
+7. Acceptance Not Required; Automatic Acceptance.
+
+You are not required to accept this License, since you have not signed it. However, nothing else grants you permission to modify or distribute the Program or its derivative works. These actions are prohibited by law if you do not accept this License. Therefore, by modifying or distributing the Program (or any work based on the Program), you indicate your acceptance of this License to do so.
+
+8. Termination.
+
+You may not use the Program unless you accept the terms of this License. However, if you do not accept the terms of this License, your license is automatically terminated and you may no longer use the Program.
+
+9. Future Versions of this License.
+
+The Free Software Foundation may publish new versions of the GNU General Public License from time to time. Each version will be given a distinguishing version number. If the Program specifies that a certain numbered version of this License applies to it and you have not received a copy of that version, you may not use the Program until you have received a copy of that version.
+
+10. Relicensing.
+
+You may not impose any further restrictions on the rights granted by this License.
+
+11. Disclaimer of Warranty.
+
+There is no warranty for the Program. You may not impose any further restrictions on the rights granted by this License.
+
+12. Limitation of Liability.
+
+There is no warranty for the Program. You may not impose any further restrictions on the rights granted by this License.
