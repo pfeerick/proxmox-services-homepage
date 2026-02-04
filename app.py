@@ -26,11 +26,11 @@ config_lock = threading.Lock()
 
 class ConfigWatcher(FileSystemEventHandler):
     """File system event handler for config file changes"""
-    
+
     def on_modified(self, event):
         if event.is_directory:
             return
-            
+
         filename = os.path.basename(event.src_path)
         if filename in ['config.yaml', 'services.yaml']:
             print(f"📁 Config file changed: {filename}")
@@ -39,7 +39,7 @@ class ConfigWatcher(FileSystemEventHandler):
 def load_config():
     """Load configuration from config.yaml file"""
     config_file = os.path.join(os.path.dirname(__file__), 'config.yaml')
-    
+
     if not os.path.exists(config_file):
         print(f"Warning: {config_file} not found. Please create it from the template.")
         print("Using environment variables or defaults...")
@@ -51,7 +51,7 @@ def load_config():
             },
             'flask': {
                 'host': '0.0.0.0',
-                'port': 8000,
+                'port': 5000,
                 'debug': True
             },
             'dashboard': {
@@ -59,9 +59,9 @@ def load_config():
                 'title': 'Proxmox Container Dashboard'
             }
         }
-    
+
     try:
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, 'r') as f:
             return yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(f"Error reading config.yaml: {e}")
@@ -70,7 +70,7 @@ def load_config():
 def load_services():
     """Load service definitions from services.yaml file"""
     services_file = os.path.join(os.path.dirname(__file__), 'services.yaml')
-    
+
     if not os.path.exists(services_file):
         print(f"Warning: {services_file} not found. Using default service definitions.")
         # Fallback to hardcoded services if file doesn't exist
@@ -78,9 +78,9 @@ def load_services():
             'jellyfin': {'port': 8096, 'name': 'Jellyfin', 'icon': '🎬', 'description': 'Media Server'},
             'homepage': {'port': 3000, 'name': 'Homepage', 'icon': '🏡', 'description': 'Dashboard'}
         }
-    
+
     try:
-        with open(services_file, 'r', encoding='utf-8') as f:
+        with open(services_file, 'r') as f:
             services_data = yaml.safe_load(f)
             return services_data.get('services', {})
     except yaml.YAMLError as e:
@@ -90,7 +90,7 @@ def load_services():
 def reload_configs():
     """Reload both config and services files"""
     global config, SERVICE_MAP
-    
+
     with config_lock:
         try:
             print("🔄 Reloading configuration files...")
@@ -119,79 +119,80 @@ file_observer = setup_file_watcher()
 
 def get_service_info(container_name):
     """Get service information for a container based on its name"""
-    # Direct match first
-    if container_name in SERVICE_MAP:
-        return SERVICE_MAP[container_name]
-    
-    # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
-    for service_name in SERVICE_MAP:
-        if container_name.startswith(service_name):
-            return SERVICE_MAP[service_name]
-    
-    # No match found
-    return None
+    with config_lock:
+        # Direct match first
+        if container_name in SERVICE_MAP:
+            return SERVICE_MAP[container_name]
+
+        # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
+        for service_name in SERVICE_MAP:
+            if container_name.startswith(service_name):
+                return SERVICE_MAP[service_name]
+
+        # No match found
+        return None
 
 class ProxmoxAPI:
     def __init__(self):
         pass  # No longer store connection details here
-        
+
     @property
     def connection_info(self):
         """Get current connection info from config"""
         with config_lock:
-            return (config['proxmox']['host'], 
-                   config['proxmox']['user'], 
+            return (config['proxmox']['host'],
+                   config['proxmox']['user'],
                    config['proxmox']['token'])
-    
+
     def get_containers(self):
         """Get all LXC containers with their IPs"""
         host, user, token = self.connection_info
         base_url = f"https://{host}/api2/json"
-        
+
         try:
             # Get all nodes first
             nodes_url = f"{base_url}/nodes"
             headers = {"Authorization": f"PVEAPIToken={user}={token}"}
-            
+
             nodes_response = requests.get(nodes_url, headers=headers, verify=False, timeout=10)
             nodes_response.raise_for_status()
             nodes = nodes_response.json()['data']
-            
+
             containers = []
-            
+
             for node in nodes:
                 node_name = node['node']
                 # Get LXC containers for this node
                 lxc_url = f"{base_url}/nodes/{node_name}/lxc"
-                
+
                 lxc_response = requests.get(lxc_url, headers=headers, verify=False, timeout=10)
                 lxc_response.raise_for_status()
                 lxc_list = lxc_response.json()['data']
-                
+
                 for container in lxc_list:
                     vmid = container['vmid']
-                    
+
                     # Get detailed info including network config
                     detail_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/config"
                     detail_response = requests.get(detail_url, headers=headers, verify=False, timeout=10)
-                    
+
                     if detail_response.status_code == 200:
                         config = detail_response.json()['data']
-                        
+
                         # Extract IP from network config
                         ip_address = self._extract_ip_from_config(config)
-                        
+
                         # If no static IP found, try to get the actual IP from running container
                         if not ip_address and container.get('status') == 'running':
                             ip_address = self._get_actual_ip_address(node_name, vmid)
-                        
+
                         # Final fallback
                         if not ip_address:
                             ip_address = 'DHCP/Unknown'
-                        
+
                         container_name = container.get('name', f'CT-{vmid}')
                         service_info = get_service_info(container_name)
-                        
+
                         containers.append({
                             'vmid': vmid,
                             'name': container_name,
@@ -203,16 +204,16 @@ class ProxmoxAPI:
                             'memory_max': container.get('maxmem', 0),
                             'service': service_info
                         })
-            
+
             return containers
-            
+
         except requests.exceptions.RequestException as e:
             print(f"Error connecting to Proxmox: {e}")
             return []
         except Exception as e:
             print(f"Error parsing Proxmox data: {e}")
             return []
-    
+
     def _extract_ip_from_config(self, config):
         """Extract IP address from container network configuration"""
         # Look for network interfaces (net0, net1, etc.)
@@ -227,32 +228,44 @@ class ProxmoxAPI:
                             ip_with_subnet = part.strip()[3:]  # Remove 'ip='
                             if ip_with_subnet.lower() != 'dhcp':
                                 return ip_with_subnet.split('/')[0]  # Remove subnet mask
-        
+
         return None  # Return None instead of 'DHCP/Unknown' for now
-    
+
     def _get_actual_ip_address(self, node_name, vmid):
         """Get the actual IP address from the running container"""
         host, user, token = self.connection_info
         base_url = f"https://{host}/api2/json"
-        
+
         try:
             # Get the current status which includes network info
             status_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/status/current"
             headers = {"Authorization": f"PVEAPIToken={user}={token}"}
-            
+
             status_response = requests.get(status_url, headers=headers, verify=False, timeout=10)
             status_response.raise_for_status()
             status_data = status_response.json()['data']
-            
+
             # Check if there's network information in the status
             if 'netin' in status_data or 'netout' in status_data:
                 # Try to get network interfaces
                 interfaces_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/interfaces"
                 interfaces_response = requests.get(interfaces_url, headers=headers, verify=False, timeout=10)
-                
+
                 if interfaces_response.status_code == 200:
                     interfaces = interfaces_response.json()['data']
-                    # Look for the first non-loopback interface with an IP
+
+                    # Debug: Log all interfaces for troubleshooting
+                    # print(f"Container {vmid} interfaces: {interfaces}")
+
+                    # Prefer eth0 if available
+                    for interface in interfaces:
+                        if interface.get('name') == 'eth0' and 'inet' in interface:
+                            ip = interface['inet']
+                            if '/' in ip:
+                                ip = ip.split('/')[0]
+                            return ip
+
+                    # Fallback: Look for the first non-loopback interface with an IP
                     for interface in interfaces:
                         if interface.get('name') != 'lo' and 'inet' in interface:
                             ip = interface['inet']
@@ -260,9 +273,9 @@ class ProxmoxAPI:
                             if '/' in ip:
                                 ip = ip.split('/')[0]
                             return ip
-            
+
             return None
-            
+
         except Exception as e:
             print(f"Error getting actual IP for container {vmid}: {e}")
             return None
@@ -270,58 +283,42 @@ class ProxmoxAPI:
 # Initialize Proxmox API
 proxmox = ProxmoxAPI()
 
+def get_service_info(container_name):
+    """Get service information for a container based on its name"""
+    with config_lock:
+        # Direct match first
+        if container_name in SERVICE_MAP:
+            return SERVICE_MAP[container_name]
+
+        # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
+        for service_name in SERVICE_MAP:
+            if container_name.startswith(service_name):
+                return SERVICE_MAP[service_name]
+
+        # No match found
+        return None
+
 @app.route('/')
 def simple_homepage():
-    """Simple homepage with just running services - shows loading state initially"""
+    """Simple homepage with just running services"""
     with config_lock:
         dashboard_config = config['dashboard']
-    
-    return render_template('simple.html', 
-                         services=[],  # Start with empty services
+
+    # Start with loading state, let JavaScript fetch the data
+    return render_template('simple.html',
+                         services=[],
                          config=dashboard_config,
                          loading=True)
 
-@app.route('/api/services')
-def api_services():
-    """JSON API endpoint for running services"""
-    containers = proxmox.get_containers()
-    
-    # Filter to only running containers with known IPs and services
-    running_services = []
-    for container in containers:
-        if (container['status'] == 'running' and 
-            container['ip'] != 'DHCP/Unknown' and 
-            container['service'] and 
-            container['service']['port']):
-            
-            protocol = container['service'].get('protocol', 'http')
-            url = f"{protocol}://{container['ip']}:{container['service']['port']}"
-            
-            running_services.append({
-                'name': container['service']['name'],
-                'icon': container['service']['icon'],
-                'url': url,
-                'description': container['service']['description'],
-                'container_name': container['name']
-            })
-    
-    # Sort alphabetically by service name
-    running_services.sort(key=lambda x: x['name'].lower())
-    
-    return jsonify({
-        'services': running_services,
-        'last_updated': datetime.now().isoformat(),
-        'total': len(running_services)
-    })
-
 @app.route('/detailed')
 def detailed_dashboard():
-    """Detailed dashboard page with all container info - shows loading state initially"""
+    """Detailed dashboard page with all container info"""
     with config_lock:
         dashboard_config = config['dashboard']
-    
-    return render_template('index.html', 
-                         containers=[],  # Start with empty containers
+
+    # Start with loading state, let JavaScript fetch the data
+    return render_template('index.html',
+                         containers=[],
                          last_updated=None,
                          config=dashboard_config,
                          loading=True)
@@ -336,6 +333,39 @@ def api_containers():
         'total': len(containers)
     })
 
+@app.route('/api/services')
+def api_services():
+    """JSON API endpoint for running services"""
+    containers = proxmox.get_containers()
+
+    # Filter to only running containers with known IPs and services
+    running_services = []
+    for container in containers:
+        if (container['status'] == 'running' and
+            container['ip'] != 'DHCP/Unknown' and
+            container['service'] and
+            container['service']['port']):
+
+            protocol = container['service'].get('protocol', 'http')
+            url = f"{protocol}://{container['ip']}:{container['service']['port']}"
+
+            running_services.append({
+                'name': container['service']['name'],
+                'icon': container['service']['icon'],
+                'url': url,
+                'description': container['service']['description'],
+                'container_name': container['name']
+            })
+
+    # Sort alphabetically by service name
+    running_services.sort(key=lambda x: x['name'].lower())
+
+    return jsonify({
+        'services': running_services,
+        'last_updated': datetime.now().isoformat(),
+        'total': len(running_services)
+    })
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
@@ -345,11 +375,11 @@ if __name__ == '__main__':
     try:
         with config_lock:
             flask_config = config['flask']
-        
+
         print(f"🚀 Starting Proxmox Dashboard on {flask_config['host']}:{flask_config['port']}")
         app.run(
-            host=flask_config['host'], 
-            port=flask_config['port'], 
+            host=flask_config['host'],
+            port=flask_config['port'],
             debug=flask_config['debug']
         )
     except KeyboardInterrupt:
