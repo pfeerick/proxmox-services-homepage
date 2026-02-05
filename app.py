@@ -61,7 +61,7 @@ def load_config():
         }
 
     try:
-        with open(config_file, 'r') as f:
+        with open(config_file, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(f"Error reading config.yaml: {e}")
@@ -80,7 +80,7 @@ def load_services():
         }
 
     try:
-        with open(services_file, 'r') as f:
+        with open(services_file, 'r', encoding='utf-8') as f:
             services_data = yaml.safe_load(f)
             return services_data.get('services', {})
     except yaml.YAMLError as e:
