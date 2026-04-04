@@ -48,6 +48,30 @@
 
 You're ready to contribute! 🎉
 
+## Running Tests
+
+Install the project with its dev dependencies (pytest, ruff, commitizen) and run the suite:
+
+```bash
+uv sync
+uv run pytest -q
+```
+
+For a targeted run:
+
+```bash
+uv run pytest tests/test_connection.py -q
+```
+
+Run the linter and formatter checks locally before pushing:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
+
+Or let the pre-commit hooks handle it automatically on `git commit`.
+
 ## Commit Message Format
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) to automate versioning and changelog generation.

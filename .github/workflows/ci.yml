@@ -27,7 +27,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies from lockfile
-        run: uv sync --locked
+        run: uv sync --locked --only-group dev
 
       - name: Run Ruff checks
         run: |
@@ -81,7 +81,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies from lockfile
-        run: uv sync --locked
+        run: uv sync --locked --no-dev
 
       - name: Import check
         run: uv run python -c "from app import app; print('OK')"
