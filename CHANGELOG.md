@@ -1,3 +1,11 @@
+## v0.2.2 (2026-04-04)
+
+### Fix
+
+- guard cache thread against None proxmox instance
+- snapshot proxmox under config_lock in health endpoint
+- use config title in detailed view page title
+
 ## v0.2.1 (2026-04-04)
 
 ### Refactor
