@@ -6,11 +6,11 @@ export function hasContainersChanged(data) {
   if (!currentContainersData) return true;
   if (data.containers.length !== currentContainersData.containers.length) return true;
   const currentSummary = currentContainersData.containers
-    .map((c) => `${c.vmid}-${c.status}-${c.ip}`)
+    .map((c) => `${c.vmid}-${c.status}-${c.ip}-${c.name}`)
     .sort()
     .join("|");
   const newSummary = data.containers
-    .map((c) => `${c.vmid}-${c.status}-${c.ip}`)
+    .map((c) => `${c.vmid}-${c.status}-${c.ip}-${c.name}`)
     .sort()
     .join("|");
   return currentSummary !== newSummary;
@@ -102,6 +102,7 @@ function createQuickLinks(container) {
     const protocol = container.service.protocol === "https" ? "https" : "http";
     links += `<a href="${protocol}://${escapeHtml(container.ip)}:${parseInt(
       container.service.port,
+      10,
     )}"
          class="quick-link primary" target="_blank">
         ${escapeHtml(container.service.icon)} Open ${escapeHtml(container.service.name)}

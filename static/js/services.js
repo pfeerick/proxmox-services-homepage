@@ -5,15 +5,12 @@ let currentServices = [];
 export function hasServicesChanged(data) {
   const newServices = data.services;
   if (newServices.length !== currentServices.length) return true;
-  const currentUrls = currentServices
-    .map((s) => s.url)
-    .sort()
-    .join(",");
-  const newUrls = newServices
-    .map((s) => s.url)
-    .sort()
-    .join(",");
-  return currentUrls !== newUrls;
+  const fingerprint = (services) =>
+    services
+      .map((s) => `${s.url}|${s.name}|${s.icon}|${s.description}`)
+      .sort()
+      .join(",");
+  return fingerprint(currentServices) !== fingerprint(newServices);
 }
 
 export function renderServices(data) {
