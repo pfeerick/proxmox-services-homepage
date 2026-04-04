@@ -439,6 +439,26 @@
             return currentSummary !== newSummary;
         }
 
+        function formatUptime(seconds) {
+            if (!seconds) return null;
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function formatMemory(used, max) {
+            if (!max) return null;
+            const usedMB = Math.round(used / 1048576);
+            const maxMB = Math.round(max / 1048576);
+            if (maxMB >= 1024) {
+                return `${(usedMB / 1024).toFixed(1)} / ${(maxMB / 1024).toFixed(1)} GB`;
+            }
+            return `${usedMB} / ${maxMB} MB`;
+        }
+
         function displayContainers(containers) {
             const containerGrid = document.getElementById('container-grid');
             const totalContainers = document.getElementById('total-containers');
@@ -458,6 +478,10 @@
                 const quickLinksHtml = createQuickLinks(container);
                 const serviceInfo = container.service ?
                     `<span class="detail-label">Service:</span><span>${container.service.icon} ${container.service.name}</span>` : '';
+                const uptime = formatUptime(container.uptime);
+                const memory = formatMemory(container.memory_usage, container.memory_max);
+                const uptimeHtml = uptime ? `<span class="detail-label">Uptime:</span><span>${uptime}</span>` : '';
+                const memoryHtml = memory ? `<span class="detail-label">Memory:</span><span>${memory}</span>` : '';
 
                 return `
                     <div class="container-card ${container.status}">
@@ -477,6 +501,9 @@
 
                             <span class="detail-label">IP Address:</span>
                             <span class="ip-address">${container.ip}</span>
+
+                            ${uptimeHtml}
+                            ${memoryHtml}
                         </div>
 
                         ${quickLinksHtml}
