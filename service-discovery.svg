@@ -1,0 +1,63 @@
+<svg width="680" viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5a67d8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- services.yaml -->
+  <rect x="40" y="40" width="160" height="56" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="120" y="63" text-anchor="middle" font-size="13" font-weight="500" fill="#085041">services.yaml</text>
+  <text x="120" y="81" text-anchor="middle" font-size="11" fill="#0f6e56">Name → port mapping</text>
+
+  <!-- config.yaml -->
+  <rect x="40" y="150" width="160" height="56" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="120" y="173" text-anchor="middle" font-size="13" font-weight="500" fill="#085041">config.yaml</text>
+  <text x="120" y="191" text-anchor="middle" font-size="11" fill="#0f6e56">Host, user, token</text>
+
+  <!-- Proxmox API -->
+  <rect x="40" y="260" width="160" height="56" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="120" y="283" text-anchor="middle" font-size="13" font-weight="500" fill="#085041">Proxmox API</text>
+  <text x="120" y="301" text-anchor="middle" font-size="11" fill="#0f6e56">LXC list + IPs</text>
+
+  <!-- Flask app -->
+  <rect x="260" y="145" width="160" height="56" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="168" text-anchor="middle" font-size="13" font-weight="500" fill="#3c3489">Flask app</text>
+  <text x="340" y="186" text-anchor="middle" font-size="11" fill="#534ab7">Match + build URLs</text>
+
+  <!-- Browser -->
+  <rect x="480" y="40" width="160" height="56" rx="8" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="560" y="63" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">Browser</text>
+  <text x="560" y="81" text-anchor="middle" font-size="11" fill="#5f5e5a">Service dashboard</text>
+
+  <!-- LXC services -->
+  <rect x="480" y="260" width="160" height="56" rx="8" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="560" y="283" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">LXC services</text>
+  <text x="560" y="301" text-anchor="middle" font-size="11" fill="#5f5e5a">Jellyfin, Navidrome…</text>
+
+  <!-- services.yaml → Flask -->
+  <line x1="200" y1="72" x2="258" y2="162" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- config.yaml → Flask -->
+  <line x1="200" y1="178" x2="258" y2="178" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- Proxmox → Flask -->
+  <line x1="200" y1="288" x2="258" y2="195" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Flask → Browser -->
+  <line x1="420" y1="162" x2="478" y2="75" stroke="#5a67d8" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="458" y="108" text-anchor="middle" font-size="10" fill="#5a67d8">renders</text>
+
+  <!-- Browser → LXC (click) -->
+  <line x1="560" y1="96" x2="560" y2="258" stroke="#888" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+  <text x="578" y="185" font-size="10" fill="#888">click</text>
+
+  <!-- Auto-refresh loop -->
+  <path d="M340 201 Q340 300 260 300 Q210 300 210 230" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)" opacity="0.6"/>
+  <text x="270" y="320" text-anchor="middle" font-size="10" fill="#888">auto-refresh (configurable interval)</text>
+
+  <!-- watched label -->
+  <text x="120" y="340" text-anchor="middle" font-size="10" fill="#888">watched for live reload</text>
+  <line x1="120" y1="206" x2="120" y2="258" stroke="#888" stroke-width="0.5" stroke-dasharray="3 2" opacity="0.5"/>
+</svg>
