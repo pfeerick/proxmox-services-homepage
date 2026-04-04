@@ -34,6 +34,32 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
+  unit:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies from lockfile
+        run: uv sync --locked
+
+      - name: Run unit tests
+        run: uv run pytest -q
+
   smoke:
     name: Smoke (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest

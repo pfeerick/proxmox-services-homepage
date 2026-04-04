@@ -21,6 +21,9 @@ tailscale = [
     "gunicorn>=23.0.0",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "uv"
@@ -50,5 +53,6 @@ indent-style = "space"
 [dependency-groups]
 dev = [
     "commitizen>=4.13.9",
+    "pytest>=9.0.2",
     "ruff>=0.15.9",
 ]
