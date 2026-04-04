@@ -2,6 +2,7 @@
 
 A dynamic web dashboard for Proxmox VE that displays all running LXC containers and their services as clickable links. Automatically discovers container IPs via the Proxmox API and matches them to service definitions in `services.yaml`.
 
+
 ## Features
 
 - **Auto-discovery** — queries the Proxmox API to find running LXC containers and their IPs
@@ -10,6 +11,15 @@ A dynamic web dashboard for Proxmox VE that displays all running LXC containers 
 - **Auto-refresh** — configurable background refresh without page reload
 - **Live config reload** — edit `config.yaml` or `services.yaml` and changes are picked up without restarting
 - **JSON API** — `/api/containers` and `/api/services` endpoints for integration with other tools
+
+
+## How it works
+
+![Service discovery flow](docs/service-discovery.svg)
+
+## Deployment options
+
+![Deployment options](docs/deployment-options.svg)
 
 ## Requirements
 
