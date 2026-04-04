@@ -23,6 +23,7 @@ tailscale = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+filterwarnings = ["ignore::urllib3.exceptions.InsecureRequestWarning"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
