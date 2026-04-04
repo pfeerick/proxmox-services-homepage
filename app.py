@@ -27,6 +27,12 @@ SERVICE_MAP = None
 proxmox = None
 config_lock = threading.Lock()
 
+# Container cache — refreshed by a single background thread so multiple
+# browser tabs never each trigger independent Proxmox API calls.
+_container_cache = {'containers': [], 'last_updated': None}
+_cache_lock = threading.Lock()
+_refresh_event = threading.Event()  # set to trigger an immediate cache refresh
+
 
 class ProxmoxAPI:
     """Client for the Proxmox VE API. Owns its connection settings so it
@@ -291,6 +297,9 @@ def reload_configs():
         except Exception as e:
             print(f"❌ Error reloading configs: {e}")
 
+    # Trigger an immediate cache refresh so the new config is reflected at once
+    _refresh_event.set()
+
 
 def setup_file_watcher():
     """Set up file system watcher for config files"""
@@ -307,6 +316,34 @@ reload_configs()
 
 # Start file watcher
 file_observer = setup_file_watcher()
+
+
+def _refresh_cache():
+    """Background thread: keep the container cache fresh.
+
+    Refreshes once per auto_refresh_seconds. Setting _refresh_event skips the
+    wait and triggers an immediate refresh — reload_configs() does this so the
+    cache reflects new config without waiting for the next scheduled cycle.
+    """
+    while True:
+        with config_lock:
+            interval = config['dashboard']['auto_refresh_seconds']
+            service_map = SERVICE_MAP
+            current_proxmox = proxmox
+
+        containers = current_proxmox.get_containers(service_map)
+
+        with _cache_lock:
+            _container_cache['containers'] = containers
+            _container_cache['last_updated'] = datetime.now().isoformat()
+
+        _refresh_event.wait(timeout=interval)
+        _refresh_event.clear()
+
+
+# Start background cache refresh thread
+_cache_thread = threading.Thread(target=_refresh_cache, daemon=True, name='cache-refresh')
+_cache_thread.start()
 
 
 def get_service_info(container_name):
@@ -355,12 +392,12 @@ def detailed_dashboard():
 @app.route('/api/containers')
 def api_containers():
     """JSON API endpoint for containers"""
-    with config_lock:
-        service_map = SERVICE_MAP
-    containers = proxmox.get_containers(service_map)
+    with _cache_lock:
+        containers = _container_cache['containers']
+        last_updated = _container_cache['last_updated']
     return jsonify({
         'containers': containers,
-        'last_updated': datetime.now().isoformat(),
+        'last_updated': last_updated or datetime.now().isoformat(),
         'total': len(containers)
     })
 
@@ -368,9 +405,9 @@ def api_containers():
 @app.route('/api/services')
 def api_services():
     """JSON API endpoint for running services"""
-    with config_lock:
-        service_map = SERVICE_MAP
-    containers = proxmox.get_containers(service_map)
+    with _cache_lock:
+        containers = _container_cache['containers']
+        last_updated = _container_cache['last_updated']
 
     # Filter to only running containers with known IPs and services
     running_services = []
@@ -396,7 +433,7 @@ def api_services():
 
     return jsonify({
         'services': running_services,
-        'last_updated': datetime.now().isoformat(),
+        'last_updated': last_updated or datetime.now().isoformat(),
         'total': len(running_services)
     })
 
