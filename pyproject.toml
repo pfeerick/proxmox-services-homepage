@@ -1,6 +1,6 @@
 [project]
 name = "proxmox-dashboard"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dynamic web dashboard for Proxmox VE that discovers running LXC containers and their services via the Proxmox API"
 readme = "README.md"
 requires-python = ">=3.12"
