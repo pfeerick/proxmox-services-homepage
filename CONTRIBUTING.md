@@ -50,7 +50,7 @@ You're ready to contribute! 🎉
 
 ## Running Tests
 
-Install the project with its dev dependencies (pytest, ruff, commitizen, djlint) and run the suite:
+Install the project with its dev dependencies (pytest, ruff, commitizen, djlint, prettier) and run the suite:
 
 ```bash
 uv sync
@@ -74,8 +74,8 @@ uv run ruff format --check .
 uv run djlint templates/ --lint
 uv run djlint templates/ --check
 
-# JavaScript (requires pre-commit environment to be initialised)
-uv run pre-commit run prettier --all-files
+# JavaScript and CSS (requires pre-commit environment to be initialised)
+pre-commit run prettier --all-files
 ```
 
 Or let the pre-commit hooks handle everything automatically on `git commit`.
