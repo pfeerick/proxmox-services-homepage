@@ -519,8 +519,23 @@ def main():
         with config_lock:
             flask_config = config["flask"]
 
-        print(f"🚀 Starting Proxmox Dashboard on {flask_config['host']}:{flask_config['port']}")
-        app.run(host=flask_config["host"], port=flask_config["port"], debug=flask_config["debug"])
+        host = flask_config["host"]
+        port = flask_config["port"]
+        debug = flask_config["debug"]
+
+        print(f"🚀 Starting Proxmox Dashboard on {host}:{port}")
+
+        if debug:
+            # Werkzeug dev server: auto-reloader and debugger for development.
+            app.run(host=host, port=port, debug=True)
+        else:
+            # Waitress: cross-platform production WSGI server.
+            # Threads handle concurrent SSE connections; a single process is
+            # intentional so the background cache thread and SSE subscriber
+            # set are shared across all request handlers.
+            import waitress
+
+            waitress.serve(app, host=host, port=port, threads=8)
     except KeyboardInterrupt:
         print("\n👋 Shutting down...")
     finally:

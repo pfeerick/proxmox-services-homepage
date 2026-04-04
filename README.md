@@ -7,8 +7,8 @@ A dynamic web dashboard for Proxmox VE that displays all running LXC containers 
 
 - **Auto-discovery** — queries the Proxmox API to find running LXC containers and their IPs
 - **Service matching** — maps container names to service definitions (port, icon, description)
-- **Two views** — a clean card-based service launcher (`/`) and a detailed container info view (`/detailed`)
-- **Auto-refresh** — configurable background refresh without page reload
+- **Two views** — a clean card-based service launcher and a detailed container info view, toggled via `/#detailed`
+- **Real-time updates** — SSE push from the server the moment the cache refreshes; no polling lag
 - **Live config reload** — edit `config.yaml` or `services.yaml` and changes are picked up without restarting
 - **JSON API** — `/api/containers` and `/api/services` endpoints for integration with other tools
 
@@ -73,7 +73,7 @@ proxmox:
 flask:
   host: "0.0.0.0"
   port: 8080                    # Change to 80 for no-port access
-  debug: false                  # Set to false in production
+  debug: false                  # true = Werkzeug dev server with reloader; false = Waitress
 
 dashboard:
   auto_refresh_seconds: 30
@@ -121,7 +121,7 @@ cp config.yaml.example config.yaml
 # Edit config.yaml with your Proxmox details
 
 # Run
-uv run app.py
+uv run dashboard
 ```
 
 Access at `http://localhost:8080` (or whichever port you configured).
@@ -176,7 +176,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/dashboard
-ExecStart=/root/.local/bin/uv run app.py
+ExecStart=/root/.local/bin/uv run dashboard
 Restart=always
 RestartSec=5
 
@@ -279,47 +279,17 @@ https://dashboard.your-tailnet.ts.net
 
 No port needed if running on port 80. Accessible from any device on your tailnet — including mobile via the Tailscale app.
 
-##### Install gunicorn and update the systemd service
-
-Inside the LXC, from `/opt/dashboard`:
-
-```bash
-uv sync --extra tailscale
-```
-
-This installs [gunicorn](https://gunicorn.org/) as a production WSGI server. Update the systemd service to use it:
-
-```bash
-cat > /etc/systemd/system/dashboard.service << 'EOF'
-[Unit]
-Description=Proxmox Services Dashboard
-After=network.target
-
-[Service]
-WorkingDirectory=/opt/dashboard
-ExecStart=/root/.local/bin/uv run gunicorn -w 2 -b 0.0.0.0:8080 app:app
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl restart dashboard
-```
-
 ---
 
 ## API Endpoints
 
 | Endpoint | Description |
 |---|---|
-| `GET /` | Simple service launcher view |
-| `GET /detailed` | Detailed container info view |
+| `GET /` | Dashboard (services view); append `#detailed` for container view |
+| `GET /api/stream` | SSE stream — pushes `containers` and `services` events on each cache refresh |
 | `GET /api/services` | JSON list of running services with URLs |
 | `GET /api/containers` | JSON list of all containers with full details |
-| `GET /health` | Health check |
+| `GET /health` | Health check — returns 503 if Proxmox is unreachable |
 
 ---
 
