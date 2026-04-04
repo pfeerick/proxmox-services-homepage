@@ -448,7 +448,7 @@ def health():
     return jsonify(body), (200 if ok else 503)
 
 
-if __name__ == '__main__':
+def main():
     try:
         with config_lock:
             flask_config = config['flask']
@@ -467,3 +467,7 @@ if __name__ == '__main__':
             file_observer.stop()
             file_observer.join()
             print("🛑 File watcher stopped")
+
+
+if __name__ == '__main__':
+    main()
