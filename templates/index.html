@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,7 +38,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             padding: 6px 12px;
             border-radius: 15px;
             font-size: 0.85em;
@@ -55,15 +56,20 @@
         .refresh-spinner-small {
             width: 12px;
             height: 12px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-top: 2px solid white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .stats {
@@ -77,7 +83,7 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
 
@@ -97,14 +103,14 @@
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             border-left: 4px solid #ddd;
             transition: transform 0.2s;
         }
 
         .container-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         }
 
         .container-card.running {
@@ -220,7 +226,7 @@
             border-radius: 50px;
             cursor: pointer;
             font-size: 1em;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             transition: background 0.2s;
         }
 
@@ -291,10 +297,12 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>🖥️ {{ config.title }} - Detailed View</h1>
-        <div class="last-updated" id="last-updated">{% if last_updated %}Last updated: {{ last_updated }}{% else %}Loading...{% endif %}</div>
+        <div class="last-updated" id="last-updated">{% if last_updated %}Last updated: {{ last_updated }}{% else
+            %}Loading...{% endif %}</div>
         <div style="margin-top: 10px;">
             <a href="/" style="color: rgba(255,255,255,0.9); text-decoration: none;">← Back to Simple View</a>
         </div>
@@ -304,7 +312,7 @@
         </div>
     </div>
 
-    <div id="loading-state" class="loading-state" {% if not loading %}style="display: none;"{% endif %}>
+    <div id="loading-state" class="loading-state" {% if not loading %}style="display: none;" {% endif %}>
         <div class="loading-spinner"></div>
         <h2>🔄 Loading Container Information...</h2>
         <p>Fetching data from Proxmox API...</p>
@@ -316,7 +324,7 @@
         <button class="retry-btn" onclick="loadContainers(true)">🔄 Retry</button>
     </div>
 
-    <div id="content-state" {% if loading %}style="display: none;"{% endif %}>
+    <div id="content-state" {% if loading %}style="display: none;" {% endif %}>
         <div class="stats" id="stats">
             <div class="stat-card">
                 <div class="stat-number" id="total-containers">0</div>
@@ -571,4 +579,5 @@
         });
     </script>
 </body>
+
 </html>
