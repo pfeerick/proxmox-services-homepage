@@ -160,10 +160,10 @@ class ProxmoxAPI:
                     detail_response = requests.get(detail_url, headers=headers, verify=False, timeout=10)
 
                     if detail_response.status_code == 200:
-                        config = detail_response.json()['data']
+                        lxc_config = detail_response.json()['data']
 
                         # Extract IP from network config
-                        ip_address = self._extract_ip_from_config(config)
+                        ip_address = self._extract_ip_from_config(lxc_config)
 
                         # If no static IP found, try to get the actual IP from running container
                         if not ip_address and container.get('status') == 'running':
