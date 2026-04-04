@@ -56,6 +56,7 @@ Copy the example and fill in your details:
 
 ```bash
 cp config.yaml.example config.yaml
+chmod 600 config.yaml   # restrict access — the file contains your API token
 ```
 
 ```yaml
@@ -63,6 +64,9 @@ proxmox:
   host: "192.168.0.1:8006"      # Proxmox host IP and port
   user: "dashboard@pam!token"   # user@realm!tokenname
   token: "your-token-secret"    # Token secret from Proxmox
+  ssl_verify: false             # false = skip verification (default, for self-signed certs)
+                                # true  = verify against system CA bundle
+                                # "/path/to/ca.pem" = verify against a custom CA cert
 
 flask:
   host: "0.0.0.0"

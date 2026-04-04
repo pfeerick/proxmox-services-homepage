@@ -14,7 +14,10 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import threading
 
-# Disable SSL warnings for self-signed certs (common with Proxmox)
+# Proxmox ships with a self-signed cert by default, so SSL verification is
+# disabled out of the box. Set proxmox.ssl_verify in config.yaml to true or
+# a CA-bundle path to enable verification. Warnings are suppressed unless
+# verification is enabled, to avoid noise on every request.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
@@ -47,7 +50,8 @@ def load_config():
             'proxmox': {
                 'host': os.getenv('PROXMOX_HOST', 'your-proxmox-ip:8006'),
                 'user': os.getenv('PROXMOX_USER', 'api@pam!dashboard'),
-                'token': os.getenv('PROXMOX_TOKEN', 'your-api-token-here')
+                'token': os.getenv('PROXMOX_TOKEN', 'your-api-token-here'),
+                'ssl_verify': False,
             },
             'flask': {
                 'host': '0.0.0.0',
@@ -125,7 +129,10 @@ class ProxmoxAPI:
             host = config['proxmox']['host']
             user = config['proxmox']['user']
             token = config['proxmox']['token']
+            ssl_verify = config['proxmox'].get('ssl_verify', False)
             service_map = SERVICE_MAP
+        if not ssl_verify:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         base_url = f"https://{host}/api2/json"
 
         try:
@@ -133,7 +140,7 @@ class ProxmoxAPI:
             nodes_url = f"{base_url}/nodes"
             headers = {"Authorization": f"PVEAPIToken={user}={token}"}
 
-            nodes_response = requests.get(nodes_url, headers=headers, verify=False, timeout=10)
+            nodes_response = requests.get(nodes_url, headers=headers, verify=ssl_verify, timeout=10)
             nodes_response.raise_for_status()
             nodes = nodes_response.json()['data']
 
@@ -144,7 +151,7 @@ class ProxmoxAPI:
                 # Get LXC containers for this node
                 lxc_url = f"{base_url}/nodes/{node_name}/lxc"
 
-                lxc_response = requests.get(lxc_url, headers=headers, verify=False, timeout=10)
+                lxc_response = requests.get(lxc_url, headers=headers, verify=ssl_verify, timeout=10)
                 lxc_response.raise_for_status()
                 lxc_list = lxc_response.json()['data']
 
@@ -153,7 +160,7 @@ class ProxmoxAPI:
 
                     # Get detailed info including network config
                     detail_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/config"
-                    detail_response = requests.get(detail_url, headers=headers, verify=False, timeout=10)
+                    detail_response = requests.get(detail_url, headers=headers, verify=ssl_verify, timeout=10)
 
                     if detail_response.status_code == 200:
                         lxc_config = detail_response.json()['data']
@@ -163,7 +170,7 @@ class ProxmoxAPI:
 
                         # If no static IP found, try to get the actual IP from running container
                         if not ip_address and container.get('status') == 'running':
-                            ip_address = self._get_actual_ip_address(node_name, vmid, host, user, token)
+                            ip_address = self._get_actual_ip_address(node_name, vmid, host, user, token, ssl_verify)
 
                         # Final fallback
                         if not ip_address:
@@ -215,7 +222,7 @@ class ProxmoxAPI:
 
         return None  # Return None instead of 'DHCP/Unknown' for now
 
-    def _get_actual_ip_address(self, node_name, vmid, host, user, token):
+    def _get_actual_ip_address(self, node_name, vmid, host, user, token, ssl_verify):
         """Get the actual IP address from the running container"""
         base_url = f"https://{host}/api2/json"
 
@@ -224,7 +231,7 @@ class ProxmoxAPI:
             status_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/status/current"
             headers = {"Authorization": f"PVEAPIToken={user}={token}"}
 
-            status_response = requests.get(status_url, headers=headers, verify=False, timeout=10)
+            status_response = requests.get(status_url, headers=headers, verify=ssl_verify, timeout=10)
             status_response.raise_for_status()
             status_data = status_response.json()['data']
 
@@ -232,7 +239,7 @@ class ProxmoxAPI:
             if 'netin' in status_data or 'netout' in status_data:
                 # Try to get network interfaces
                 interfaces_url = f"{base_url}/nodes/{node_name}/lxc/{vmid}/interfaces"
-                interfaces_response = requests.get(interfaces_url, headers=headers, verify=False, timeout=10)
+                interfaces_response = requests.get(interfaces_url, headers=headers, verify=ssl_verify, timeout=10)
 
                 if interfaces_response.status_code == 200:
                     interfaces = interfaces_response.json()['data']
