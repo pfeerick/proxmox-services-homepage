@@ -115,23 +115,6 @@ reload_configs()
 # Start file watcher
 file_observer = setup_file_watcher()
 
-# Remove the hardcoded SERVICE_MAP - now loaded from services.yaml
-
-def get_service_info(container_name):
-    """Get service information for a container based on its name"""
-    with config_lock:
-        # Direct match first
-        if container_name in SERVICE_MAP:
-            return SERVICE_MAP[container_name]
-
-        # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
-        for service_name in SERVICE_MAP:
-            if container_name.startswith(service_name):
-                return SERVICE_MAP[service_name]
-
-        # No match found
-        return None
-
 class ProxmoxAPI:
     def __init__(self):
         pass  # No longer store connection details here
