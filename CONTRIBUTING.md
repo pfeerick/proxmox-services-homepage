@@ -50,7 +50,7 @@ You're ready to contribute! 🎉
 
 ## Running Tests
 
-Install the project with its dev dependencies (pytest, ruff, commitizen) and run the suite:
+Install the project with its dev dependencies (pytest, ruff, commitizen, djlint) and run the suite:
 
 ```bash
 uv sync
@@ -63,14 +63,22 @@ For a targeted run:
 uv run pytest tests/test_connection.py -q
 ```
 
-Run the linter and formatter checks locally before pushing:
+Run all linter and formatter checks locally before pushing:
 
 ```bash
+# Python
 uv run ruff check .
 uv run ruff format --check .
+
+# Jinja2 templates
+uv run djlint templates/ --lint
+uv run djlint templates/ --check
+
+# JavaScript (requires pre-commit environment to be initialised)
+uv run pre-commit run prettier --all-files
 ```
 
-Or let the pre-commit hooks handle it automatically on `git commit`.
+Or let the pre-commit hooks handle everything automatically on `git commit`.
 
 ## Commit Message Format
 
