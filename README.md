@@ -59,6 +59,8 @@ cp config.yaml.example config.yaml
 chmod 600 config.yaml   # restrict access — the file contains your API token
 ```
 
+`config.yaml` is git-ignored so your API token won't be accidentally committed. `config.yaml.example` is the committed template.
+
 ```yaml
 proxmox:
   host: "192.168.0.1:8006"      # Proxmox host IP and port
