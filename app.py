@@ -127,12 +127,7 @@ class ProxmoxAPI:
                             ip_address = "DHCP/Unknown"
 
                         container_name = container.get("name", f"CT-{vmid}")
-                        service_info = service_map.get(container_name)
-                        if service_info is None:
-                            for service_name in service_map:
-                                if container_name.startswith(service_name):
-                                    service_info = service_map[service_name]
-                                    break
+                        service_info = get_service_info(container_name, service_map)
 
                         containers.append(
                             {
@@ -357,20 +352,14 @@ _cache_thread = threading.Thread(target=_refresh_cache, daemon=True, name="cache
 _cache_thread.start()
 
 
-def get_service_info(container_name):
-    """Get service information for a container based on its name"""
-    with config_lock:
-        # Direct match first
-        if container_name in SERVICE_MAP:
-            return SERVICE_MAP[container_name]
-
-        # Try partial matches for containers with suffixes (e.g., jellyfin-001, adguard-home)
-        for service_name in SERVICE_MAP:
-            if container_name.startswith(service_name):
-                return SERVICE_MAP[service_name]
-
-        # No match found
-        return None
+def get_service_info(container_name, service_map):
+    """Look up service info for a container by exact or prefix match."""
+    if container_name in service_map:
+        return service_map[container_name]
+    for service_name in service_map:
+        if container_name.startswith(service_name):
+            return service_map[service_name]
+    return None
 
 
 @app.route("/")
