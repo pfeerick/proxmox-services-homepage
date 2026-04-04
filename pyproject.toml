@@ -21,6 +21,21 @@ tailscale = [
     "gunicorn>=23.0.0",
 ]
 
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "uv"
+version_files = [
+    "pyproject.toml:version",
+    "pyproject.toml:project.version"
+]
+update_changelog_on_bump = true
+tag_format = "v$version"
+bump_message = "bump: version $current_version → $new_version"
+pre_bump_hooks = [
+    "uv lock",
+    "git add uv.lock",
+]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
@@ -34,5 +49,6 @@ indent-style = "space"
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.13.9",
     "ruff>=0.15.9",
 ]
