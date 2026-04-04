@@ -119,17 +119,13 @@ class ProxmoxAPI:
     def __init__(self):
         pass  # No longer store connection details here
 
-    @property
-    def connection_info(self):
-        """Get current connection info from config"""
-        with config_lock:
-            return (config['proxmox']['host'],
-                   config['proxmox']['user'],
-                   config['proxmox']['token'])
-
     def get_containers(self):
         """Get all LXC containers with their IPs"""
-        host, user, token = self.connection_info
+        with config_lock:
+            host = config['proxmox']['host']
+            user = config['proxmox']['user']
+            token = config['proxmox']['token']
+            service_map = SERVICE_MAP
         base_url = f"https://{host}/api2/json"
 
         try:
@@ -167,14 +163,19 @@ class ProxmoxAPI:
 
                         # If no static IP found, try to get the actual IP from running container
                         if not ip_address and container.get('status') == 'running':
-                            ip_address = self._get_actual_ip_address(node_name, vmid)
+                            ip_address = self._get_actual_ip_address(node_name, vmid, host, user, token)
 
                         # Final fallback
                         if not ip_address:
                             ip_address = 'DHCP/Unknown'
 
                         container_name = container.get('name', f'CT-{vmid}')
-                        service_info = get_service_info(container_name)
+                        service_info = service_map.get(container_name)
+                        if service_info is None:
+                            for service_name in service_map:
+                                if container_name.startswith(service_name):
+                                    service_info = service_map[service_name]
+                                    break
 
                         containers.append({
                             'vmid': vmid,
@@ -214,9 +215,8 @@ class ProxmoxAPI:
 
         return None  # Return None instead of 'DHCP/Unknown' for now
 
-    def _get_actual_ip_address(self, node_name, vmid):
+    def _get_actual_ip_address(self, node_name, vmid, host, user, token):
         """Get the actual IP address from the running container"""
-        host, user, token = self.connection_info
         base_url = f"https://{host}/api2/json"
 
         try:
