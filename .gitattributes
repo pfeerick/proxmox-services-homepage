@@ -1,0 +1,4 @@
+# Normalise all text files to LF in the repository.
+# Git will convert to the platform native line ending on checkout,
+# but the warning is suppressed because the intent is now explicit.
+* text=auto eol=lf
