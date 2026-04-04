@@ -22,6 +22,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
+# Directory containing this file — used consistently by config loaders and
+# the file watcher so the app works regardless of the working directory.
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Global variables for config and services
 config = None
 SERVICE_MAP = None
@@ -41,7 +45,7 @@ class ConfigWatcher(FileSystemEventHandler):
 
 def load_config():
     """Load configuration from config.yaml file"""
-    config_file = os.path.join(os.path.dirname(__file__), 'config.yaml')
+    config_file = os.path.join(APP_DIR, 'config.yaml')
 
     if not os.path.exists(config_file):
         print(f"Warning: {config_file} not found. Please create it from the template.")
@@ -73,7 +77,7 @@ def load_config():
 
 def load_services():
     """Load service definitions from services.yaml file"""
-    services_file = os.path.join(os.path.dirname(__file__), 'services.yaml')
+    services_file = os.path.join(APP_DIR, 'services.yaml')
 
     if not os.path.exists(services_file):
         print(f"Warning: {services_file} not found. Using default service definitions.")
@@ -108,7 +112,7 @@ def setup_file_watcher():
     """Set up file system watcher for config files"""
     event_handler = ConfigWatcher()
     observer = Observer()
-    observer.schedule(event_handler, path='.', recursive=False)
+    observer.schedule(event_handler, path=APP_DIR, recursive=False)
     observer.start()
     print("👁️  File watcher started - configs will auto-reload on changes")
     return observer
