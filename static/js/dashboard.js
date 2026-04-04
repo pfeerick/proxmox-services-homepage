@@ -1,66 +1,52 @@
 /**
- * initDashboard — shared fetch/refresh/loading-state factory.
+ * initView — manages loading/error/content state for a single dashboard panel.
+ * Data is pushed in from the SSE stream rather than fetched internally.
  *
  * @param {object} opts
- * @param {string}   opts.apiUrl  - API endpoint to poll
- * @param {object}   opts.els     - DOM elements: loading, error, content
- * @param {function} opts.hasChanged  - (data) => boolean
- * @param {function} opts.render      - (data) => void, called when hasChanged is true
- * @param {function} [opts.onSuccess] - (data) => void, called on every successful fetch
- * @returns {{ load: function }}
+ * @param {object}   opts.els        - DOM elements: loading, error, content
+ * @param {function} opts.hasChanged - (data) => boolean
+ * @param {function} opts.render     - (data) => void, called when hasChanged is true
+ * @param {function} [opts.onData]   - (data) => void, called on every data event
+ * @returns {{ onData: function, onError: function, reset: function }}
  */
-export function initDashboard({ apiUrl, els, hasChanged, render, onSuccess }) {
-  const { autoRefreshSeconds } = window.DASHBOARD_CONFIG;
+export function initView({ els, hasChanged, render, onData: onDataCallback }) {
   const { loading, error, content } = els;
-  let autoRefreshInterval;
-  let isFirstLoad = true;
+  let hasReceivedData = false;
 
-  async function load() {
-    if (isFirstLoad) {
-      loading.style.display = "block";
-      error.style.display = "none";
-      content.style.display = "none";
-    }
+  function showLoading() {
+    loading.style.display = "block";
+    error.style.display = "none";
+    content.style.display = "none";
+  }
 
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+  showLoading();
 
-      const data = await response.json();
-
-      if (isFirstLoad) {
+  return {
+    onData(data) {
+      if (!hasReceivedData) {
         loading.style.display = "none";
         content.style.display = "block";
-        isFirstLoad = false;
+        hasReceivedData = true;
       }
+      error.style.display = "none";
+      onDataCallback?.(data);
+      if (hasChanged(data)) render(data);
+    },
 
-      onSuccess?.(data);
-
-      if (hasChanged(data)) {
-        render(data);
-      }
-
-      if (autoRefreshSeconds > 0 && !autoRefreshInterval) {
-        autoRefreshInterval = setInterval(load, autoRefreshSeconds * 1000);
-      }
-    } catch (err) {
-      console.error(`Error fetching ${apiUrl}:`, err);
-
-      if (isFirstLoad) {
+    onError() {
+      // Only surface the error state if we've never successfully received data.
+      // If we already have data on screen, keep showing it — the browser will
+      // reconnect automatically and update it when the stream recovers.
+      if (!hasReceivedData) {
         loading.style.display = "none";
         error.style.display = "block";
         content.style.display = "none";
-      } else {
-        console.warn("Background refresh failed, keeping current data visible");
       }
-    }
-  }
+    },
 
-  window.addEventListener("beforeunload", () => {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-  });
-
-  return { load };
+    reset() {
+      hasReceivedData = false;
+      showLoading();
+    },
+  };
 }

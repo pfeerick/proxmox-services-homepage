@@ -1,10 +1,9 @@
-import { initDashboard } from "./dashboard.js";
+import { initView } from "./dashboard.js";
 import { hasServicesChanged, renderServices } from "./services.js";
 import { hasContainersChanged, renderContainers } from "./containers.js";
 
-// --- Services dashboard ---
-const { load: loadServices } = initDashboard({
-  apiUrl: "/api/services",
+// --- View state managers ---
+const servicesView = initView({
   els: {
     loading: document.getElementById("services-loading"),
     error: document.getElementById("services-error"),
@@ -14,9 +13,7 @@ const { load: loadServices } = initDashboard({
   render: renderServices,
 });
 
-// --- Containers dashboard ---
-const { load: loadContainers } = initDashboard({
-  apiUrl: "/api/containers",
+const containersView = initView({
   els: {
     loading: document.getElementById("containers-loading"),
     error: document.getElementById("containers-error"),
@@ -24,15 +21,36 @@ const { load: loadContainers } = initDashboard({
   },
   hasChanged: hasContainersChanged,
   render: renderContainers,
-  onSuccess(data) {
-    const updateTime = new Date(data.last_updated).toLocaleString();
-    document.getElementById("last-updated").textContent = `Last updated: ${updateTime}`;
+  onData(data) {
+    document.getElementById("last-updated").textContent = `Last updated: ${new Date(
+      data.last_updated,
+    ).toLocaleString()}`;
   },
 });
 
+// --- SSE stream ---
+let es;
+
+function connectStream() {
+  es = new EventSource("/api/stream");
+  es.addEventListener("services", (e) => servicesView.onData(JSON.parse(e.data)));
+  es.addEventListener("containers", (e) => containersView.onData(JSON.parse(e.data)));
+  es.onerror = () => {
+    servicesView.onError();
+    containersView.onError();
+  };
+}
+
+function reconnect() {
+  es?.close();
+  servicesView.reset();
+  containersView.reset();
+  connectStream();
+}
+
 // --- Retry buttons ---
-document.getElementById("services-retry").addEventListener("click", loadServices);
-document.getElementById("containers-retry").addEventListener("click", loadContainers);
+document.getElementById("services-retry").addEventListener("click", reconnect);
+document.getElementById("containers-retry").addEventListener("click", reconnect);
 
 // --- View switching ---
 function getActiveView() {
@@ -48,8 +66,8 @@ function switchView(viewName) {
 }
 
 window.addEventListener("hashchange", () => switchView(getActiveView()));
+window.addEventListener("beforeunload", () => es?.close());
 
 // --- Initialise ---
 switchView(getActiveView());
-loadServices();
-loadContainers();
+connectStream();

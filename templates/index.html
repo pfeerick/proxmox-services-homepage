@@ -67,11 +67,6 @@
                 <div id="containers-grid" class="container-grid"></div>
             </div>
         </div>
-        <script>
-            window.DASHBOARD_CONFIG = {
-                autoRefreshSeconds: {{ config.auto_refresh_seconds }},
-            };
-        </script>
         <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
     </body>
 </html>

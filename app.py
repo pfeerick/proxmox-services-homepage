@@ -4,14 +4,16 @@ Proxmox LXC Container IP Dashboard
 A simple Flask app to display all LXC container IPs from Proxmox VE
 """
 
+import json
 import os
+import queue
 import threading
 from datetime import datetime
 
 import requests
 import urllib3
 import yaml
-from flask import Flask, jsonify, render_template
+from flask import Flask, Response, jsonify, render_template
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -33,6 +35,11 @@ config_lock = threading.Lock()
 _container_cache = {"containers": [], "last_updated": None}
 _cache_lock = threading.Lock()
 _refresh_event = threading.Event()  # set to trigger an immediate cache refresh
+
+# SSE subscribers — one Queue per connected browser tab.
+# The cache thread pushes to all queues after each refresh.
+_subscribers: set[queue.Queue] = set()
+_subscribers_lock = threading.Lock()
 
 
 class ProxmoxAPI:
@@ -339,10 +346,12 @@ def _refresh_cache():
 
         containers = current_proxmox.get_containers(service_map)
 
+        last_updated = datetime.now().isoformat()
         with _cache_lock:
             _container_cache["containers"] = containers
-            _container_cache["last_updated"] = datetime.now().isoformat()
+            _container_cache["last_updated"] = last_updated
 
+        _push_to_subscribers(containers, last_updated)
         _refresh_event.wait(timeout=interval)
         _refresh_event.clear()
 
@@ -360,6 +369,54 @@ def get_service_info(container_name, service_map):
         if container_name.startswith(service_name):
             return service_map[service_name]
     return None
+
+
+def _compute_services(containers):
+    """Derive the running-services list from a containers snapshot."""
+    running_services = []
+    for container in containers:
+        if (
+            container["status"] == "running"
+            and container["ip"] != "DHCP/Unknown"
+            and container["service"]
+            and container["service"]["port"]
+        ):
+            protocol = container["service"].get("protocol", "http")
+            url = f"{protocol}://{container['ip']}:{container['service']['port']}"
+            running_services.append(
+                {
+                    "name": container["service"]["name"],
+                    "icon": container["service"]["icon"],
+                    "url": url,
+                    "description": container["service"]["description"],
+                    "container_name": container["name"],
+                }
+            )
+    running_services.sort(key=lambda x: x["name"].lower())
+    return running_services
+
+
+def _push_to_subscribers(containers, last_updated):
+    """Push a fresh data payload to every connected SSE client."""
+    containers_payload = json.dumps(
+        {"containers": containers, "last_updated": last_updated, "total": len(containers)}
+    )
+    services = _compute_services(containers)
+    services_payload = json.dumps(
+        {"services": services, "last_updated": last_updated, "total": len(services)}
+    )
+    event = (
+        f"event: containers\ndata: {containers_payload}\n\n"
+        f"event: services\ndata: {services_payload}\n\n"
+    )
+    with _subscribers_lock:
+        dead = set()
+        for q in _subscribers:
+            try:
+                q.put_nowait(event)
+            except queue.Full:
+                dead.add(q)
+        _subscribers.difference_update(dead)
 
 
 @app.route("/")
@@ -394,37 +451,54 @@ def api_services():
         containers = _container_cache["containers"]
         last_updated = _container_cache["last_updated"]
 
-    # Filter to only running containers with known IPs and services
-    running_services = []
-    for container in containers:
-        if (
-            container["status"] == "running"
-            and container["ip"] != "DHCP/Unknown"
-            and container["service"]
-            and container["service"]["port"]
-        ):
-            protocol = container["service"].get("protocol", "http")
-            url = f"{protocol}://{container['ip']}:{container['service']['port']}"
-
-            running_services.append(
-                {
-                    "name": container["service"]["name"],
-                    "icon": container["service"]["icon"],
-                    "url": url,
-                    "description": container["service"]["description"],
-                    "container_name": container["name"],
-                }
-            )
-
-    # Sort alphabetically by service name
-    running_services.sort(key=lambda x: x["name"].lower())
-
+    running_services = _compute_services(containers)
     return jsonify(
         {
             "services": running_services,
             "last_updated": last_updated or datetime.now().isoformat(),
             "total": len(running_services),
         }
+    )
+
+
+@app.route("/api/stream")
+def api_stream():
+    """SSE endpoint — pushes containers and services events on every cache refresh."""
+
+    def generate():
+        q: queue.Queue[str] = queue.Queue(maxsize=10)
+        with _subscribers_lock:
+            _subscribers.add(q)
+        try:
+            # Send the current cache immediately so the browser doesn't wait
+            # for the next scheduled refresh before displaying anything.
+            with _cache_lock:
+                containers = list(_container_cache["containers"])
+                last_updated = _container_cache["last_updated"] or datetime.now().isoformat()
+            containers_payload = json.dumps(
+                {"containers": containers, "last_updated": last_updated, "total": len(containers)}
+            )
+            services = _compute_services(containers)
+            services_payload = json.dumps(
+                {"services": services, "last_updated": last_updated, "total": len(services)}
+            )
+            yield f"event: containers\ndata: {containers_payload}\n\n"
+            yield f"event: services\ndata: {services_payload}\n\n"
+
+            while True:
+                try:
+                    event = q.get(timeout=25)
+                    yield event
+                except queue.Empty:
+                    yield ": heartbeat\n\n"  # keep the connection alive through proxies
+        finally:
+            with _subscribers_lock:
+                _subscribers.discard(q)
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
