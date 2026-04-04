@@ -222,6 +222,8 @@ systemctl enable --now dashboard-update.timer
 
 Extends Option 2 to make the dashboard accessible from anywhere via [Tailscale](https://tailscale.com/), using a named URL with automatic HTTPS — no port forwarding or public exposure required.
 
+![Tailscale HTTPS flow](docs/tailscale-https-flow.svg)
+
 #### Follow Option 2 first, then:
 
 ##### Enable TUN device for the LXC
@@ -270,6 +272,36 @@ https://dashboard.your-tailnet.ts.net
 ```
 
 No port needed if running on port 80. Accessible from any device on your tailnet — including mobile via the Tailscale app.
+
+##### Install gunicorn and update the systemd service
+
+Inside the LXC, from `/opt/dashboard`:
+
+```bash
+uv sync --extra tailscale
+```
+
+This installs [gunicorn](https://gunicorn.org/) as a production WSGI server. Update the systemd service to use it:
+
+```bash
+cat > /etc/systemd/system/dashboard.service << 'EOF'
+[Unit]
+Description=Proxmox Services Dashboard
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/dashboard
+ExecStart=/root/.local/bin/uv run gunicorn -w 2 -b 0.0.0.0:8080 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl restart dashboard
+```
 
 ---
 

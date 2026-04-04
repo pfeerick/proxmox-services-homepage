@@ -10,3 +10,8 @@ dependencies = [
     "requests>=2.32.5",
     "watchdog>=6.0.0",
 ]
+
+[project.optional-dependencies]
+tailscale = [
+    "gunicorn>=23.0.0",
+]
