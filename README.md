@@ -1,0 +1,292 @@
+# Proxmox Services Homepage
+
+A dynamic web dashboard for Proxmox VE that displays all running LXC containers and their services as clickable links. Automatically discovers container IPs via the Proxmox API and matches them to service definitions in `services.yaml`.
+
+## Features
+
+- **Auto-discovery** — queries the Proxmox API to find running LXC containers and their IPs
+- **Service matching** — maps container names to service definitions (port, icon, description)
+- **Two views** — a clean card-based service launcher (`/`) and a detailed container info view (`/detailed`)
+- **Auto-refresh** — configurable background refresh without page reload
+- **Live config reload** — edit `config.yaml` or `services.yaml` and changes are picked up without restarting
+- **JSON API** — `/api/containers` and `/api/services` endpoints for integration with other tools
+
+## Requirements
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- A Proxmox VE instance with API access
+- A Proxmox API token with at least `PVEAuditor` role on `/`
+
+## Configuration
+
+### Proxmox API Token
+
+Create a dedicated user and API token in Proxmox:
+
+```bash
+# Create user
+pveum user add dashboard@pam --comment "Dashboard service"
+
+# Create role with audit permissions
+pveum role add DashboardAuditor --privs "VM.Audit Sys.Audit Datastore.Audit"
+
+# Assign role
+pveum acl modify / --users dashboard@pam --roles PVEAuditor
+
+# Create API token (save the token secret shown - it won't be shown again)
+pveum user token add dashboard@pam dashboard --privsep 0
+```
+
+Or reuse an existing token that has `PVEAuditor` on `/`.
+
+### config.yaml
+
+Copy the example and fill in your details:
+
+```bash
+cp config.yaml.example config.yaml
+```
+
+```yaml
+proxmox:
+  host: "192.168.0.1:8006"      # Proxmox host IP and port
+  user: "dashboard@pam!token"   # user@realm!tokenname
+  token: "your-token-secret"    # Token secret from Proxmox
+
+flask:
+  host: "0.0.0.0"
+  port: 8080                    # Change to 80 for no-port access
+  debug: false                  # Set to false in production
+
+dashboard:
+  auto_refresh_seconds: 30
+  title: "Proxmox Container Dashboard"
+```
+
+### services.yaml
+
+Maps LXC container names to their service information. Containers not listed here will still appear in the detailed view but won't have a service link. Containers with `port: null` are skipped in the service view.
+
+```yaml
+services:
+  jellyfin:
+    port: 8096
+    name: "Jellyfin"
+    icon: "🎬"
+    description: "Media Server"
+
+  myservice:
+    port: 8080
+    name: "My Service"
+    icon: "🔧"
+    description: "Description here"
+    protocol: "https"   # Optional, defaults to http
+```
+
+---
+
+## Running the Dashboard
+
+### Option 1 — Local / Development
+
+Run directly on your local machine to access the dashboard from your desktop. Requires network access to your Proxmox host.
+
+```bash
+# Clone the repo
+git clone https://github.com/pfeerick/proxmox-services-homepage.git
+cd proxmox-services-homepage
+
+# Install dependencies
+uv sync
+
+# Configure
+cp config.yaml.example config.yaml
+# Edit config.yaml with your Proxmox details
+
+# Run
+uv run app.py
+```
+
+Access at `http://localhost:8080` (or whichever port you configured).
+
+---
+
+### Option 2 — Proxmox LXC (LAN access)
+
+Run as a persistent service inside a lightweight Proxmox LXC container. Accessible from anywhere on your LAN without any additional setup.
+
+#### Deploy the LXC
+
+Use the [community-scripts](https://community-scripts.github.io/ProxmoxVE/) Debian script in the Proxmox shell:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/debian.sh)"
+```
+
+Use **Advanced** mode to set the hostname (e.g. `dashboard`). Note the assigned IP address.
+
+#### Set up the dashboard
+
+Enter the LXC console and run:
+
+```bash
+# Install dependencies
+apt update && apt install -y git
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+
+# Clone repo (use a GitHub deploy key or personal access token)
+git clone https://github.com/pfeerick/proxmox-services-homepage.git /opt/dashboard
+cd /opt/dashboard
+
+# Install Python dependencies
+uv sync
+
+# Configure
+cp config.yaml.example config.yaml
+nano config.yaml  # fill in your Proxmox details
+```
+
+Set `port: 80` in `config.yaml` for no-port access, or use `8080` and access via `http://192.168.0.x:8080`.
+
+#### Create systemd service
+
+```bash
+cat > /etc/systemd/system/dashboard.service << 'EOF'
+[Unit]
+Description=Proxmox Services Dashboard
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/dashboard
+ExecStart=/root/.local/bin/uv run app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now dashboard
+```
+
+Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8080`.
+
+#### Optional: Daily auto-update from GitHub
+
+```bash
+cat > /etc/systemd/system/dashboard-update.service << 'EOF'
+[Unit]
+Description=Update Proxmox Services Dashboard
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dashboard
+ExecStart=/usr/bin/git pull
+ExecStart=/root/.local/bin/uv sync
+ExecStartPost=/bin/systemctl restart dashboard
+EOF
+
+cat > /etc/systemd/system/dashboard-update.timer << 'EOF'
+[Unit]
+Description=Daily update of Proxmox Services Dashboard
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now dashboard-update.timer
+```
+
+---
+
+### Option 3 — Proxmox LXC with Tailscale (remote access)
+
+Extends Option 2 to make the dashboard accessible from anywhere via [Tailscale](https://tailscale.com/), using a named URL with automatic HTTPS — no port forwarding or public exposure required.
+
+#### Follow Option 2 first, then:
+
+##### Enable TUN device for the LXC
+
+On the Proxmox host, stop the LXC and edit its config:
+
+```bash
+pct stop <vmid>
+nano /etc/pve/lxc/<vmid>.conf
+```
+
+Add these lines:
+
+```
+lxc.cgroup2.devices.allow: c 10:200 rwm
+lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
+```
+
+Also add nesting support:
+
+```bash
+pct set <vmid> --features keyctl=1,nesting=1
+pct start <vmid>
+```
+
+##### Install and configure Tailscale
+
+Inside the LXC:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+systemctl start tailscaled
+tailscale up
+```
+
+Authenticate via the URL shown. Once connected, the LXC will appear in your Tailscale admin console as `dashboard` (or whatever hostname you set) and be accessible at:
+
+```
+http://dashboard.your-tailnet.ts.net
+```
+
+With MagicDNS and HTTPS enabled in your [Tailscale admin console](https://login.tailscale.com/admin/dns), this becomes:
+
+```
+https://dashboard.your-tailnet.ts.net
+```
+
+No port needed if running on port 80. Accessible from any device on your tailnet — including mobile via the Tailscale app.
+
+---
+
+## API Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /` | Simple service launcher view |
+| `GET /detailed` | Detailed container info view |
+| `GET /api/services` | JSON list of running services with URLs |
+| `GET /api/containers` | JSON list of all containers with full details |
+| `GET /health` | Health check |
+
+---
+
+## Adding a New Service
+
+1. Deploy your LXC with a recognisable hostname (e.g. `myapp`)
+2. Add an entry to `services.yaml`:
+
+```yaml
+services:
+  myapp:
+    port: 3000
+    name: "My App"
+    icon: "🚀"
+    description: "My new service"
+```
+
+3. The dashboard will pick it up automatically on the next refresh — no restart needed.
