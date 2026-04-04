@@ -337,6 +337,11 @@ def _refresh_cache():
             service_map = SERVICE_MAP
             current_proxmox = proxmox
 
+        if current_proxmox is None:
+            _refresh_event.wait(timeout=interval)
+            _refresh_event.clear()
+            continue
+
         containers = current_proxmox.get_containers(service_map)
 
         with _cache_lock:
