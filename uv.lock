@@ -357,7 +357,7 @@ wheels = [
 [[package]]
 name = "proxmox-dashboard"
 version = "0.3.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "flask" },
     { name = "pyyaml" },

@@ -5,13 +5,23 @@ description = "Dynamic web dashboard for Proxmox VE that discovers running LXC c
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{name = "Peter Feerick"}]
-license = {text = "GPL-3.0-only"}
+license = "GPL-3.0-only"
 dependencies = [
     "flask>=3.1.2",
     "pyyaml>=6.0.2",
     "requests>=2.32.5",
     "watchdog>=6.0.0",
 ]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[tool.uv]
+package = true
 
 [project.scripts]
 dashboard = "app:main"
