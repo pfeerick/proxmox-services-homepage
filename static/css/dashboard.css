@@ -54,34 +54,11 @@ body {
   color: white;
 }
 
-/* --- Refresh indicator --- */
-.refresh-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 6px 12px;
-  border-radius: 15px;
-  font-size: 0.85em;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.refresh-indicator.active {
-  opacity: 1;
-}
-
-.refresh-spinner {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+/* --- Loading & error states --- */
+.loading-state {
+  text-align: center;
+  color: white;
+  padding: 60px 20px;
 }
 
 @keyframes spin {
@@ -91,13 +68,6 @@ body {
   100% {
     transform: rotate(360deg);
   }
-}
-
-/* --- Loading & error states --- */
-.loading-state {
-  text-align: center;
-  color: white;
-  padding: 60px 20px;
 }
 
 .loading-spinner {
@@ -361,12 +331,6 @@ body {
 @media (max-width: 768px) {
   .header h1 {
     font-size: 1.8em;
-  }
-
-  .refresh-indicator {
-    position: static;
-    display: inline-flex;
-    margin-top: 8px;
   }
 
   .services-grid {

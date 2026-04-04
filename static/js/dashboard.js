@@ -3,7 +3,7 @@
  *
  * @param {object} opts
  * @param {string}   opts.apiUrl  - API endpoint to poll
- * @param {object}   opts.els     - DOM elements: loading, error, content, refreshIndicator
+ * @param {object}   opts.els     - DOM elements: loading, error, content
  * @param {function} opts.hasChanged  - (data) => boolean
  * @param {function} opts.render      - (data) => void, called when hasChanged is true
  * @param {function} [opts.onSuccess] - (data) => void, called on every successful fetch
@@ -11,17 +11,15 @@
  */
 export function initDashboard({ apiUrl, els, hasChanged, render, onSuccess }) {
   const { autoRefreshSeconds } = window.DASHBOARD_CONFIG;
-  const { loading, error, content, refreshIndicator } = els;
+  const { loading, error, content } = els;
   let autoRefreshInterval;
   let isFirstLoad = true;
 
-  async function load(showIndicator = false) {
+  async function load() {
     if (isFirstLoad) {
       loading.style.display = "block";
       error.style.display = "none";
       content.style.display = "none";
-    } else if (showIndicator) {
-      refreshIndicator.classList.add("active");
     }
 
     try {
@@ -38,7 +36,6 @@ export function initDashboard({ apiUrl, els, hasChanged, render, onSuccess }) {
         isFirstLoad = false;
       }
 
-      refreshIndicator.classList.remove("active");
       onSuccess?.(data);
 
       if (hasChanged(data)) {
@@ -46,11 +43,10 @@ export function initDashboard({ apiUrl, els, hasChanged, render, onSuccess }) {
       }
 
       if (autoRefreshSeconds > 0 && !autoRefreshInterval) {
-        autoRefreshInterval = setInterval(() => load(true), autoRefreshSeconds * 1000);
+        autoRefreshInterval = setInterval(load, autoRefreshSeconds * 1000);
       }
     } catch (err) {
       console.error(`Error fetching ${apiUrl}:`, err);
-      refreshIndicator.classList.remove("active");
 
       if (isFirstLoad) {
         loading.style.display = "none";

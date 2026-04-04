@@ -2,8 +2,6 @@ import { initDashboard } from "./dashboard.js";
 import { hasServicesChanged, renderServices } from "./services.js";
 import { hasContainersChanged, renderContainers } from "./containers.js";
 
-const refreshIndicator = document.getElementById("refresh-indicator");
-
 // --- Services dashboard ---
 const { load: loadServices } = initDashboard({
   apiUrl: "/api/services",
@@ -11,7 +9,6 @@ const { load: loadServices } = initDashboard({
     loading: document.getElementById("services-loading"),
     error: document.getElementById("services-error"),
     content: document.getElementById("services-content"),
-    refreshIndicator,
   },
   hasChanged: hasServicesChanged,
   render: renderServices,
@@ -24,7 +21,6 @@ const { load: loadContainers } = initDashboard({
     loading: document.getElementById("containers-loading"),
     error: document.getElementById("containers-error"),
     content: document.getElementById("containers-content"),
-    refreshIndicator,
   },
   hasChanged: hasContainersChanged,
   render: renderContainers,
@@ -35,8 +31,8 @@ const { load: loadContainers } = initDashboard({
 });
 
 // --- Retry buttons ---
-document.getElementById("services-retry").addEventListener("click", () => loadServices(false));
-document.getElementById("containers-retry").addEventListener("click", () => loadContainers(false));
+document.getElementById("services-retry").addEventListener("click", loadServices);
+document.getElementById("containers-retry").addEventListener("click", loadContainers);
 
 // --- View switching ---
 function getActiveView() {
@@ -55,5 +51,5 @@ window.addEventListener("hashchange", () => switchView(getActiveView()));
 
 // --- Initialise ---
 switchView(getActiveView());
-loadServices(false);
-loadContainers(false);
+loadServices();
+loadContainers();
