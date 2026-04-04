@@ -117,6 +117,6 @@ class TestPageRoutes:
         response = flask_client.get("/")
         assert response.status_code == 200
 
-    def test_detailed_returns_200(self, flask_client):
+    def test_detailed_route_removed(self, flask_client):
         response = flask_client.get("/detailed")
-        assert response.status_code == 200
+        assert response.status_code == 404

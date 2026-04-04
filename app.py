@@ -363,25 +363,13 @@ def get_service_info(container_name, service_map):
 
 
 @app.route("/")
-def simple_homepage():
-    """Simple homepage with just running services"""
+def index():
+    """Single-page dashboard — services and detailed views are both rendered
+    client-side; the server only provides config and the HTML shell."""
     with config_lock:
         dashboard_config = config["dashboard"]
 
-    # Start with loading state, let JavaScript fetch the data
-    return render_template("simple.html", services=[], config=dashboard_config, loading=True)
-
-
-@app.route("/detailed")
-def detailed_dashboard():
-    """Detailed dashboard page with all container info"""
-    with config_lock:
-        dashboard_config = config["dashboard"]
-
-    # Start with loading state, let JavaScript fetch the data
-    return render_template(
-        "index.html", containers=[], last_updated=None, config=dashboard_config, loading=True
-    )
+    return render_template("index.html", config=dashboard_config)
 
 
 @app.route("/api/containers")
