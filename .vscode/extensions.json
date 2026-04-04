@@ -5,6 +5,8 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "redhat.vscode-yaml",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "monosans.djlint",
+        "esbenp.prettier-vscode"
     ]
 }
