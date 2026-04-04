@@ -1,3 +1,9 @@
+## v0.3.0 (2026-04-04)
+
+### Feat
+
+- show memory usage and uptime in detailed container view
+
 ## v0.2.2 (2026-04-04)
 
 ### Fix
