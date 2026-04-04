@@ -29,7 +29,6 @@ filterwarnings = ["ignore::urllib3.exceptions.InsecureRequestWarning"]
 name = "cz_conventional_commits"
 version_provider = "uv"
 version_files = [
-    "pyproject.toml:version",
     "pyproject.toml:project.version"
 ]
 update_changelog_on_bump = true
