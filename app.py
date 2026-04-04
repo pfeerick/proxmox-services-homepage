@@ -449,7 +449,9 @@ def api_services():
 @app.route("/health")
 def health():
     """Health check endpoint — returns 503 if Proxmox is unreachable"""
-    ok, error = proxmox.check_connection()
+    with config_lock:
+        current_proxmox = proxmox
+    ok, error = current_proxmox.check_connection()
     body = {"status": "healthy" if ok else "unhealthy", "timestamp": datetime.now().isoformat()}
     if error:
         body["error"] = error
