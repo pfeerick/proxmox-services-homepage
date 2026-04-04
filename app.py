@@ -4,15 +4,16 @@ Proxmox LXC Container IP Dashboard
 A simple Flask app to display all LXC container IPs from Proxmox VE
 """
 
-from flask import Flask, render_template, jsonify
+import os
+import threading
+from datetime import datetime
+
 import requests
 import urllib3
-from datetime import datetime
-import os
 import yaml
-from watchdog.observers import Observer
+from flask import Flask, jsonify, render_template
 from watchdog.events import FileSystemEventHandler
-import threading
+from watchdog.observers import Observer
 
 app = Flask(__name__)
 
