@@ -127,6 +127,25 @@ class ProxmoxAPI:
     def __init__(self):
         pass  # No longer store connection details here
 
+    def check_connection(self):
+        """Probe the Proxmox API. Returns (True, None) or (False, error_str)."""
+        with config_lock:
+            host = config['proxmox']['host']
+            user = config['proxmox']['user']
+            token = config['proxmox']['token']
+            ssl_verify = config['proxmox'].get('ssl_verify', False)
+        try:
+            response = requests.get(
+                f"https://{host}/api2/json/nodes",
+                headers={"Authorization": f"PVEAPIToken={user}={token}"},
+                verify=ssl_verify,
+                timeout=5,
+            )
+            response.raise_for_status()
+            return True, None
+        except requests.exceptions.RequestException as e:
+            return False, str(e)
+
     def get_containers(self):
         """Get all LXC containers with their IPs"""
         with config_lock:
@@ -362,8 +381,12 @@ def api_services():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+    """Health check endpoint — returns 503 if Proxmox is unreachable"""
+    ok, error = proxmox.check_connection()
+    body = {'status': 'healthy' if ok else 'unhealthy', 'timestamp': datetime.now().isoformat()}
+    if error:
+        body['error'] = error
+    return jsonify(body), (200 if ok else 503)
 
 if __name__ == '__main__':
     try:
