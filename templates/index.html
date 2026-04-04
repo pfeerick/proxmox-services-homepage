@@ -341,6 +341,15 @@
     </button>
 
     <script>
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         let autoRefreshInterval;
         let isFirstLoad = true;
         let currentContainersData = null;
@@ -477,19 +486,19 @@
             containerGrid.innerHTML = containers.map(container => {
                 const quickLinksHtml = createQuickLinks(container);
                 const serviceInfo = container.service ?
-                    `<span class="detail-label">Service:</span><span>${container.service.icon} ${container.service.name}</span>` : '';
+                    `<span class="detail-label">Service:</span><span>${escapeHtml(container.service.icon)} ${escapeHtml(container.service.name)}</span>` : '';
                 const uptime = formatUptime(container.uptime);
                 const memory = formatMemory(container.memory_usage, container.memory_max);
-                const uptimeHtml = uptime ? `<span class="detail-label">Uptime:</span><span>${uptime}</span>` : '';
-                const memoryHtml = memory ? `<span class="detail-label">Memory:</span><span>${memory}</span>` : '';
+                const uptimeHtml = uptime ? `<span class="detail-label">Uptime:</span><span>${escapeHtml(uptime)}</span>` : '';
+                const memoryHtml = memory ? `<span class="detail-label">Memory:</span><span>${escapeHtml(memory)}</span>` : '';
 
                 return `
-                    <div class="container-card ${container.status}">
-                        <div class="container-name">${container.name}</div>
+                    <div class="container-card ${escapeHtml(container.status)}">
+                        <div class="container-name">${escapeHtml(container.name)}</div>
 
                         <div class="container-details">
                             <span class="detail-label">Status:</span>
-                            <span class="status ${container.status}">${container.status}</span>
+                            <span class="status ${escapeHtml(container.status)}">${escapeHtml(container.status)}</span>
 
                             ${serviceInfo}
 
@@ -497,10 +506,10 @@
                             <span>${container.vmid}</span>
 
                             <span class="detail-label">Node:</span>
-                            <span>${container.node}</span>
+                            <span>${escapeHtml(container.node)}</span>
 
                             <span class="detail-label">IP Address:</span>
-                            <span class="ip-address">${container.ip}</span>
+                            <span class="ip-address">${escapeHtml(container.ip)}</span>
 
                             ${uptimeHtml}
                             ${memoryHtml}
@@ -528,23 +537,23 @@
             let links = '';
 
             if (container.service && container.service.port) {
-                const protocol = container.service.protocol || 'http';
+                const protocol = container.service.protocol === 'https' ? 'https' : 'http';
                 links += `
-                    <a href="${protocol}://${container.ip}:${container.service.port}"
+                    <a href="${protocol}://${escapeHtml(container.ip)}:${parseInt(container.service.port)}"
                        class="quick-link primary" target="_blank">
-                        ${container.service.icon} Open ${container.service.name}
+                        ${escapeHtml(container.service.icon)} Open ${escapeHtml(container.service.name)}
                     </a>
                 `;
             } else {
                 // Fallback generic links for unknown services
                 links += `
-                    <a href="http://${container.ip}:80" class="quick-link" target="_blank">HTTP</a>
-                    <a href="http://${container.ip}:8080" class="quick-link" target="_blank">8080</a>
+                    <a href="http://${escapeHtml(container.ip)}:80" class="quick-link" target="_blank">HTTP</a>
+                    <a href="http://${escapeHtml(container.ip)}:8080" class="quick-link" target="_blank">8080</a>
                 `;
             }
 
             // Always show SSH link for running containers
-            links += `<a href="ssh://${container.ip}:22" class="quick-link ssh" target="_blank">SSH</a>`;
+            links += `<a href="ssh://${escapeHtml(container.ip)}:22" class="quick-link ssh" target="_blank">SSH</a>`;
 
             return `<div class="quick-links">${links}</div>`;
         }

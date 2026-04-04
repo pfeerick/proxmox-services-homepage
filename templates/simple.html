@@ -269,6 +269,15 @@
     </div>
 
     <script>
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         let autoRefreshInterval;
         let isFirstLoad = true;
         let currentServices = [];
@@ -370,11 +379,11 @@
 
             // Create service cards
             servicesGrid.innerHTML = services.map(service => `
-                <a href="${service.url}" class="service-card" target="_blank"
-                   title="${service.container_name} - ${service.description}">
-                    <span class="service-icon">${service.icon}</span>
-                    <div class="service-name">${service.name}</div>
-                    <div class="service-description">${service.description}</div>
+                <a href="${escapeHtml(service.url)}" class="service-card" target="_blank"
+                   title="${escapeHtml(service.container_name)} - ${escapeHtml(service.description)}">
+                    <span class="service-icon">${escapeHtml(service.icon)}</span>
+                    <div class="service-name">${escapeHtml(service.name)}</div>
+                    <div class="service-description">${escapeHtml(service.description)}</div>
                 </a>
             `).join('');
         }
