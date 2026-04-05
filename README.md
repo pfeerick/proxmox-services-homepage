@@ -142,85 +142,24 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/Proxmo
 
 Use **Advanced** mode to set the hostname (e.g. `dashboard`). Note the assigned IP address.
 
-#### Set up the dashboard
+#### Run the installer
 
 Enter the LXC console and run:
 
 ```bash
-# Install dependencies
-apt update && apt install -y git
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.local/bin/env
-
-# Clone repo (use a GitHub deploy key or personal access token)
-git clone https://github.com/pfeerick/proxmox-services-homepage.git /opt/dashboard
-cd /opt/dashboard
-
-# Install Python dependencies
-uv sync
-
-# Configure
-cp config.yaml.example config.yaml
-nano config.yaml  # fill in your Proxmox details
+bash <(curl -fsSL https://raw.githubusercontent.com/pfeerick/proxmox-services-homepage/master/install.sh)
 ```
 
-Set `port: 80` in `config.yaml` for no-port access, or use `8080` and access via `http://192.168.0.x:8080`.
+The installer will:
+- Install `git`, `curl`, and `uv`
+- Clone the repo to `/opt/dashboard`
+- Prompt for your Proxmox host, API credentials, port, and title
+- Write `config.yaml` and create/enable the systemd service
+- Optionally set up a daily auto-update timer
 
-#### Create systemd service
+Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8080` depending on the port you chose.
 
-```bash
-cat > /etc/systemd/system/dashboard.service << 'EOF'
-[Unit]
-Description=Proxmox Services Dashboard
-After=network.target
-
-[Service]
-WorkingDirectory=/opt/dashboard
-ExecStart=/root/.local/bin/uv run dashboard
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable --now dashboard
-```
-
-Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8080`.
-
-#### Optional: Daily auto-update from GitHub
-
-```bash
-cat > /etc/systemd/system/dashboard-update.service << 'EOF'
-[Unit]
-Description=Update Proxmox Services Dashboard
-After=network.target
-
-[Service]
-Type=oneshot
-WorkingDirectory=/opt/dashboard
-ExecStart=/usr/bin/git pull
-ExecStart=/root/.local/bin/uv sync
-ExecStartPost=/bin/systemctl restart dashboard
-EOF
-
-cat > /etc/systemd/system/dashboard-update.timer << 'EOF'
-[Unit]
-Description=Daily update of Proxmox Services Dashboard
-
-[Timer]
-OnCalendar=daily
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-systemctl daemon-reload
-systemctl enable --now dashboard-update.timer
-```
+> **Updating** — re-run the installer at any time; it detects an existing install and pulls the latest changes instead of cloning.
 
 ---
 

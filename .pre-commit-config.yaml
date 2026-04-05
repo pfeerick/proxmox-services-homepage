@@ -25,6 +25,12 @@ repos:
         stages: [pre-commit]
         types_or: [html]
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        stages: [pre-commit]
+
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.13.9
     hooks:
