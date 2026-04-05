@@ -1,3 +1,23 @@
+## v0.4.0 (2026-04-05)
+
+### Feat
+
+- add install.sh for one-command LXC setup
+- use waitress as production WSGI server
+- replace polling with SSE push for real-time updates
+
+### Fix
+
+- broaden change-detection fingerprints and fix parseInt radix
+- escape HTML in template innerHTML to prevent XSS
+
+### Refactor
+
+- remove refresh indicator
+- extract CSS to static file and add Prettier CSS formatting
+- convert to SPA with ES modules and hash-based routing
+- eliminate duplicate service-matching logic
+
 ## v0.3.0 (2026-04-04)
 
 ### Feat
