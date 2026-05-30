@@ -3,41 +3,36 @@
 ## Initial Setup
 
 ### Prerequisites
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) installed
+- [Bun](https://bun.sh/) v1.0+
+- [commitizen](https://commitizen-tools.github.io/commitizen/) installed globally (`uv tool install commitizen` — commitizen is a Python tool, so uv is the easiest way to install it globally)
+- [pre-commit](https://pre-commit.com/) installed globally (`uv tool install pre-commit`)
 
 ### First-Time Setup
 
-1. **Install global tools:**
-   ```bash
-   uv tool install commitizen
-   uv tool install pre-commit
-   ```
-
-2. **Clone the repository:**
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/pfeerick/proxmox-services-homepage.git
    cd proxmox-services-homepage
    ```
 
-3. **Install project dependencies:**
+2. **Install project dependencies:**
    ```bash
-   uv sync
+   bun install
    ```
 
-4. **Configure the dashboard:**
+3. **Configure the dashboard:**
    ```bash
-   cp config.yaml.example config.yaml
-   chmod 600 config.yaml
-   # Edit config.yaml with your Proxmox details
+   cp config.toml.example config.toml
+   chmod 600 config.toml
+   # Edit config.toml with your Proxmox details
    ```
 
-5. **Install pre-commit hooks:**
+4. **Install pre-commit hooks:**
    ```bash
    pre-commit install --hook-type pre-commit --hook-type commit-msg
    ```
 
-6. **Verify setup:**
+5. **Verify setup:**
    ```bash
    # Check commitizen is available
    cz version
@@ -50,32 +45,27 @@ You're ready to contribute! 🎉
 
 ## Running Tests
 
-Install the project with its dev dependencies (pytest, ruff, commitizen, djlint, prettier) and run the suite:
-
 ```bash
-uv sync
-uv run pytest -q
+bun test
 ```
 
 For a targeted run:
 
 ```bash
-uv run pytest tests/test_connection.py -q
+bun test tests/ip-parsing.test.ts
 ```
 
-Run all linter and formatter checks locally before pushing:
+Run the linter and type checker before pushing:
 
 ```bash
-# Python
-uv run ruff check .
-uv run ruff format --check .
+# Lint and format (Biome)
+bun run check
 
-# Jinja2 templates
-uv run djlint templates/ --lint
-uv run djlint templates/ --check
+# Auto-fix all safe issues
+bun run check:fix
 
-# JavaScript and CSS (requires pre-commit environment to be initialised)
-pre-commit run prettier --all-files
+# TypeScript type check
+bun tsc --noEmit
 ```
 
 Or let the pre-commit hooks handle everything automatically on `git commit`.
@@ -149,7 +139,7 @@ docs: add Tailscale deployment guide
 chore: upgrade dependencies
 
 # Breaking change (bumps 0.1.0 → 1.0.0)
-feat!: redesign services.yaml format
+feat!: redesign services.toml format
 ```
 
 ## Commit Workflows
@@ -219,10 +209,10 @@ git push --follow-tags
 ```
 
 During `cz bump`, Commitizen is configured to run pre-bump hooks that:
-- refresh `uv.lock` via `uv lock`
-- stage the lockfile automatically with `git add uv.lock`
+- run `bun install` to ensure `bun.lock` is up to date
+- stage the lockfile automatically with `git add bun.lock`
 
-This keeps `uv.lock` in sync before the release commit and tag are created, and `--retry` handles pre-commit hooks that may rewrite files during the first commit attempt.
+The version is tracked in `.cz.toml` and `package.json` — both are updated on each bump.
 
 ### Manual Version Bumping
 
@@ -238,9 +228,9 @@ cz bump --increment MAJOR --retry    # 0.1.0 → 1.0.0
 
 1. Analyzes commits since last version tag
 2. Determines version bump (patch/minor/major)
-3. Updates `version` in `pyproject.toml`
+3. Updates `version` in `.cz.toml` and `package.json`
 4. Updates or creates `CHANGELOG.md`
-5. Runs pre-bump hooks to refresh and stage `uv.lock`
+5. Runs pre-bump hooks to refresh and stage `bun.lock`
 6. Creates a git commit: `bump: version 0.1.0 → 0.2.0`
 7. Creates a git tag: `v0.2.0`
 

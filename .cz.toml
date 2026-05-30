@@ -1,0 +1,13 @@
+[commitizen]
+name = "cz_conventional_commits"
+version = "0.4.0"
+version_files = [
+    "package.json"
+]
+update_changelog_on_bump = true
+tag_format = "v$version"
+bump_message = "bump: version $current_version → $new_version"
+pre_bump_hooks = [
+    "bun install",
+    "git add bun.lock",
+]
