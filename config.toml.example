@@ -1,0 +1,18 @@
+# Proxmox Dashboard Configuration
+
+[proxmox]
+host = "your-proxmox-ip:8006"
+user = "api@pam!dashboard"
+token = "your-api-token-here"
+# Proxmox uses a self-signed cert by default — set to false to skip verification.
+# Set to true to verify against the system CA bundle, or provide a path to a
+# custom CA certificate (e.g. ssl_verify = "/etc/ssl/certs/proxmox-ca.pem").
+ssl_verify = false
+
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[dashboard]
+auto_refresh_seconds = 30
+title = "Proxmox Container Dashboard"

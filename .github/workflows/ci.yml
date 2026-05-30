@@ -23,80 +23,52 @@ on:
 
 jobs:
   lint:
-    name: Lint (Ruff)
+    name: Lint (Biome)
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: bun install
 
-      - name: Install dependencies from lockfile
-        run: uv sync --locked --only-group dev
-
-      - name: Run Ruff checks
-        run: |
-          uv run ruff check .
-          uv run ruff format --check .
+      - name: Run Biome checks
+        run: bun run check
 
   unit:
-    name: Unit Tests (Python ${{ matrix.python-version }})
+    name: Unit Tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13", "3.14"]
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Install dependencies from lockfile
-        run: uv sync --locked
+      - name: Install dependencies
+        run: bun install
 
       - name: Run unit tests
-        run: uv run pytest -q
+        run: bun test
 
-  smoke:
-    name: Smoke (Python ${{ matrix.python-version }})
+  typecheck:
+    name: Type Check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13", "3.14"]
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: bun install
 
-      - name: Install dependencies from lockfile
-        run: uv sync --locked --no-dev
-
-      - name: Import check
-        run: uv run python -c "from app import app; print('OK')"
-
-      - name: Dependency consistency check
-        run: uv pip check
+      - name: TypeScript type check
+        run: bun tsc --noEmit

@@ -1,0 +1,127 @@
+import { readFileSync } from "node:fs";
+import type { Container, ServiceMap } from "./types.ts";
+import { extractIpFromConfig, getServiceInfo } from "./utils.ts";
+
+interface LxcEntry {
+  vmid: number;
+  name?: string;
+  status: string;
+  uptime?: number;
+  mem?: number;
+  maxmem?: number;
+}
+
+interface NetworkInterface {
+  name?: string;
+  inet?: string;
+}
+
+type FetchOptions = RequestInit & {
+  tls?: { rejectUnauthorized?: boolean; ca?: string };
+};
+
+export class ProxmoxAPI {
+  private readonly baseUrl: string;
+  private readonly headers: Record<string, string>;
+  private readonly fetchOptions: FetchOptions;
+
+  constructor(host: string, user: string, token: string, sslVerify: boolean | string = false) {
+    this.baseUrl = `https://${host}/api2/json`;
+    this.headers = { Authorization: `PVEAPIToken=${user}=${token}` };
+
+    if (sslVerify === false) {
+      this.fetchOptions = { tls: { rejectUnauthorized: false } };
+    } else if (typeof sslVerify === "string") {
+      const ca = readFileSync(sslVerify, "utf-8");
+      this.fetchOptions = { tls: { ca } };
+    } else {
+      this.fetchOptions = {};
+    }
+  }
+
+  private async get<T>(path: string): Promise<T> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      headers: this.headers,
+      ...this.fetchOptions,
+    } as RequestInit);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return res.json() as Promise<T>;
+  }
+
+  async checkConnection(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      await this.get("/nodes");
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  async getContainers(serviceMap: ServiceMap): Promise<Container[]> {
+    try {
+      const nodesRes = await this.get<{ data: Array<{ node: string }> }>("/nodes");
+      const containers: Container[] = [];
+
+      for (const { node } of nodesRes.data) {
+        const lxcRes = await this.get<{ data: LxcEntry[] }>(`/nodes/${node}/lxc`);
+
+        for (const ct of lxcRes.data) {
+          let ip: string | null = null;
+
+          const configRes = await this.get<{ data: Record<string, unknown> }>(
+            `/nodes/${node}/lxc/${ct.vmid}/config`,
+          ).catch(() => null);
+
+          if (configRes) ip = extractIpFromConfig(configRes.data);
+
+          if (!ip && ct.status === "running") {
+            ip = await this.getActualIp(node, ct.vmid);
+          }
+
+          const name = ct.name ?? `CT-${ct.vmid}`;
+          containers.push({
+            vmid: ct.vmid,
+            name,
+            status: ct.status as Container["status"],
+            node,
+            ip: ip ?? "DHCP/Unknown",
+            uptime: ct.uptime ?? 0,
+            memory_usage: ct.mem ?? 0,
+            memory_max: ct.maxmem ?? 0,
+            service: getServiceInfo(name, serviceMap),
+          });
+        }
+      }
+
+      return containers;
+    } catch (e) {
+      console.error("Error connecting to Proxmox:", e);
+      return [];
+    }
+  }
+
+  private async getActualIp(node: string, vmid: number): Promise<string | null> {
+    try {
+      const statusRes = await this.get<{ data: Record<string, unknown> }>(
+        `/nodes/${node}/lxc/${vmid}/status/current`,
+      );
+
+      if (!("netin" in statusRes.data || "netout" in statusRes.data)) return null;
+
+      const ifRes = await this.get<{ data: NetworkInterface[] }>(
+        `/nodes/${node}/lxc/${vmid}/interfaces`,
+      ).catch(() => null);
+
+      if (!ifRes) return null;
+
+      const eth0 = ifRes.data.find((i) => i.name === "eth0" && i.inet);
+      if (eth0?.inet) return eth0.inet.split("/")[0];
+
+      const fallback = ifRes.data.find((i) => i.name !== "lo" && i.inet);
+      if (fallback?.inet) return fallback.inet.split("/")[0];
+    } catch (e) {
+      console.error(`Error getting actual IP for container ${vmid}:`, e);
+    }
+    return null;
+  }
+}
