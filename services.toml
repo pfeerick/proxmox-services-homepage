@@ -100,6 +100,30 @@ name = "Homepage"
 icon = "🏡"
 description = "Dashboard"
 
+[services.wallos]
+port = 80
+name = "Wallos"
+icon = "💳"
+description = "Subscription Tracker"
+
+[services.immich]
+port = 2283
+name = "Immich"
+icon = "📸"
+description = "Photo Management"
+
+[services.gitea]
+port = 3000
+name = "Gitea"
+icon = "🍵"
+description = "Git Server"
+
+[services.linkwarden]
+port = 3000
+name = "Linkwarden"
+icon = "🔗"
+description = "Bookmark Manager"
+
 # Add more services below as you deploy new containers:
 # [services.my-app]
 # port = 1234
