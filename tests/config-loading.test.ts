@@ -117,22 +117,26 @@ describe("mtimeOf", () => {
     expect(mtimeOf(join(dir, "nope.toml"))).toBe(0);
   });
 
-  it("changes when a file is overwritten in place", () => {
+  it("changes when a file is overwritten in place", async () => {
     const dir = makeTmpDir();
     const path = join(dir, "services.toml");
     writeFileSync(path, "a");
     const before = mtimeOf(path);
+    // A tiny delay guards against two back-to-back writes landing in the same
+    // filesystem timestamp tick (observed as CI flakiness on fast runners).
+    await Bun.sleep(20);
     writeFileSync(path, "b");
     expect(mtimeOf(path)).not.toBe(before);
   });
 
-  it("changes when a file is replaced via write-temp-then-rename (atomic save)", () => {
+  it("changes when a file is replaced via write-temp-then-rename (atomic save)", async () => {
     // Regression test: fs.watch missed this pattern, which editors like VS Code use for saves.
     const dir = makeTmpDir();
     const path = join(dir, "services.toml");
     const tmpPath = `${path}.tmp`;
     writeFileSync(path, "a");
     const before = mtimeOf(path);
+    await Bun.sleep(20);
     writeFileSync(tmpPath, "b");
     renameSync(tmpPath, path);
     expect(mtimeOf(path)).not.toBe(before);
