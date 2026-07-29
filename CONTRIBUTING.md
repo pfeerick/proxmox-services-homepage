@@ -3,7 +3,7 @@
 ## Initial Setup
 
 ### Prerequisites
-- [Bun](https://bun.sh/) v1.0+
+- [Bun](https://bun.sh/) v1.0+ — the exact version is pinned in `.mise.toml`; run `mise install` to pick it up automatically if you use [mise](https://mise.jdx.dev/)
 - [commitizen](https://commitizen-tools.github.io/commitizen/) installed globally (`uv tool install commitizen` — commitizen is a Python tool, so uv is the easiest way to install it globally)
 - [pre-commit](https://pre-commit.com/) installed globally (`uv tool install pre-commit`)
 
