@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readConfig, readServices } from "../src/config.ts";
+import { mtimeOf, readConfig, readServices } from "../src/config.ts";
 
 function makeTmpDir(): string {
   return mkdtempSync(join(tmpdir(), "proxmox-test-"));
@@ -89,5 +89,33 @@ description = "An app"
     const dir = makeTmpDir();
     writeFileSync(join(dir, "services.toml"), '[other]\nkey = "value"\n');
     expect(readServices(dir)).toEqual({});
+  });
+});
+
+describe("mtimeOf", () => {
+  it("returns 0 for a missing file", () => {
+    const dir = makeTmpDir();
+    expect(mtimeOf(join(dir, "nope.toml"))).toBe(0);
+  });
+
+  it("changes when a file is overwritten in place", () => {
+    const dir = makeTmpDir();
+    const path = join(dir, "services.toml");
+    writeFileSync(path, "a");
+    const before = mtimeOf(path);
+    writeFileSync(path, "b");
+    expect(mtimeOf(path)).not.toBe(before);
+  });
+
+  it("changes when a file is replaced via write-temp-then-rename (atomic save)", () => {
+    // Regression test: fs.watch missed this pattern, which editors like VS Code use for saves.
+    const dir = makeTmpDir();
+    const path = join(dir, "services.toml");
+    const tmpPath = `${path}.tmp`;
+    writeFileSync(path, "a");
+    const before = mtimeOf(path);
+    writeFileSync(tmpPath, "b");
+    renameSync(tmpPath, path);
+    expect(mtimeOf(path)).not.toBe(before);
   });
 });

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, watch } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { AppConfig, ServiceMap } from "./types.ts";
 
@@ -62,17 +62,34 @@ export function reloadConfigs(): void {
   reloadCallback?.();
 }
 
-export function startFileWatcher(): void {
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const WATCH_POLL_INTERVAL_MS = 1000;
 
-  watch(APP_DIR, { persistent: false }, (_, filename) => {
-    if (!filename || !["config.toml", "services.toml"].includes(filename)) return;
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      console.log(`📁 Config file changed: ${filename}`);
-      reloadConfigs();
-    }, 100);
-  });
+// Polls mtimes rather than using fs.watch: many editors (VS Code included) save
+// via write-temp-then-rename, which fs.watch's directory-level events can miss
+// or deliver late — mtime polling is immune to that regardless of write pattern.
+export function mtimeOf(path: string): number {
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+export function startFileWatcher(): void {
+  const configPath = join(APP_DIR, "config.toml");
+  const servicesPath = join(APP_DIR, "services.toml");
+  let lastConfigMtime = mtimeOf(configPath);
+  let lastServicesMtime = mtimeOf(servicesPath);
+
+  setInterval(() => {
+    const configMtime = mtimeOf(configPath);
+    const servicesMtime = mtimeOf(servicesPath);
+    if (configMtime === lastConfigMtime && servicesMtime === lastServicesMtime) return;
+    lastConfigMtime = configMtime;
+    lastServicesMtime = servicesMtime;
+    console.log("📁 Config files changed");
+    reloadConfigs();
+  }, WATCH_POLL_INTERVAL_MS).unref();
 
   console.log("👁️  File watcher started — configs will auto-reload on changes");
 }
