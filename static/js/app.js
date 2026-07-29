@@ -1,6 +1,7 @@
+import { hasContainersChanged, renderContainers } from "./containers.js";
 import { initView } from "./dashboard.js";
 import { hasServicesChanged, renderServices } from "./services.js";
-import { hasContainersChanged, renderContainers } from "./containers.js";
+import { initThemeToggle } from "./theme.js";
 
 // --- View state managers ---
 const servicesView = initView({
@@ -69,5 +70,6 @@ window.addEventListener("hashchange", () => switchView(getActiveView()));
 window.addEventListener("beforeunload", () => es?.close());
 
 // --- Initialise ---
+initThemeToggle();
 switchView(getActiveView());
 connectStream();

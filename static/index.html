@@ -4,10 +4,22 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{TITLE}}</title>
+        <script>
+            // Applied before first paint to avoid a flash of the wrong theme.
+            (function () {
+                try {
+                    var override = localStorage.getItem("theme");
+                    if (override === "light" || override === "dark") {
+                        document.documentElement.setAttribute("data-theme", override);
+                    }
+                } catch (e) {}
+            })();
+        </script>
         <link rel="stylesheet" href="/static/css/dashboard.css">
     </head>
     <body>
         <div class="header">
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle color theme"></button>
             <h1>🏠 {{TITLE}}</h1>
             <nav class="view-nav">
                 <a href="#" class="view-btn active" data-view="services">🏠 Services</a>
