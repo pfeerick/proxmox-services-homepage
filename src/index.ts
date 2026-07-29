@@ -38,7 +38,7 @@ const server = Bun.serve({
   hostname: config.server.host,
   port: config.server.port,
 
-  async fetch(req) {
+  async fetch(req, server) {
     const { pathname } = new URL(req.url);
 
     if (pathname === "/") return serveIndex();
@@ -69,6 +69,9 @@ const server = Bun.serve({
     }
 
     if (pathname === "/api/stream") {
+      // SSE connections are long-lived by design — exempt from Bun's default 10s idle timeout.
+      server.timeout(req, 0);
+
       const { containers, last_updated } = getCache();
       const ts = last_updated ?? new Date().toISOString();
       const services = computeServices(containers);
