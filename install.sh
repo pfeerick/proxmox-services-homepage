@@ -55,23 +55,6 @@ apt-get update -qq
 apt-get install -y -qq git curl unzip
 
 # ---------------------------------------------------------------------------
-# Bun
-# ---------------------------------------------------------------------------
-heading "Checking Bun"
-BUN_BIN=""
-for candidate in /root/.bun/bin/bun /usr/local/bin/bun; do
-    [[ -x "$candidate" ]] && BUN_BIN="$candidate" && break
-done
-
-if [[ -z "$BUN_BIN" ]]; then
-    info "Installing Bun..."
-    curl -fsSL https://bun.sh/install | bash
-    BUN_BIN="/root/.bun/bin/bun"
-else
-    info "Bun found at $BUN_BIN"
-fi
-
-# ---------------------------------------------------------------------------
 # Clone or update repo
 # ---------------------------------------------------------------------------
 heading "Setting up repository"
@@ -81,6 +64,34 @@ if $IS_UPDATE; then
 else
     info "Cloning into $INSTALL_DIR..."
     git clone "$REPO_URL" "$INSTALL_DIR"
+fi
+
+# ---------------------------------------------------------------------------
+# Bun (pinned to the version in .mise.toml, so deploys match tested dev builds)
+# ---------------------------------------------------------------------------
+heading "Checking Bun"
+PINNED_BUN_VERSION=""
+if [[ -f "$INSTALL_DIR/.mise.toml" ]]; then
+    PINNED_BUN_VERSION=$(grep -E '^bun[[:space:]]*=' "$INSTALL_DIR/.mise.toml" | sed -E 's/.*"([^"]+)".*/\1/')
+fi
+
+BUN_BIN=""
+for candidate in /root/.bun/bin/bun /usr/local/bin/bun; do
+    [[ -x "$candidate" ]] && BUN_BIN="$candidate" && break
+done
+CURRENT_BUN_VERSION=""
+[[ -n "$BUN_BIN" ]] && CURRENT_BUN_VERSION="$("$BUN_BIN" --version)"
+
+if [[ -n "$BUN_BIN" && "$CURRENT_BUN_VERSION" == "$PINNED_BUN_VERSION" ]]; then
+    info "Bun v$CURRENT_BUN_VERSION found at $BUN_BIN (matches pinned version)"
+elif [[ -n "$PINNED_BUN_VERSION" ]]; then
+    info "Installing Bun v$PINNED_BUN_VERSION (pinned in .mise.toml)..."
+    curl -fsSL https://bun.sh/install | bash -s "bun-v$PINNED_BUN_VERSION"
+    BUN_BIN="/root/.bun/bin/bun"
+else
+    warn "No .mise.toml found — installing latest Bun"
+    curl -fsSL https://bun.sh/install | bash
+    BUN_BIN="/root/.bun/bin/bun"
 fi
 
 # ---------------------------------------------------------------------------
@@ -172,9 +183,7 @@ After=network.target
 [Service]
 Type=oneshot
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/git -C $INSTALL_DIR pull
-ExecStart=$BUN_BIN install --cwd $INSTALL_DIR
-ExecStart=$BUN_BIN run --cwd $INSTALL_DIR build
+ExecStart=/bin/bash $INSTALL_DIR/install.sh
 ExecStartPost=/bin/systemctl restart dashboard
 EOF
 

@@ -29,6 +29,18 @@ export function getServiceInfo(
   return null;
 }
 
+/** True if `current` (e.g. "1.3.14") is >= `min`, comparing major.minor.patch numerically. */
+export function satisfiesMinVersion(current: string, min: string): boolean {
+  const currentParts = current.split(".").map(Number);
+  const minParts = min.split(".").map(Number);
+  for (let i = 0; i < Math.max(currentParts.length, minParts.length); i++) {
+    const c = currentParts[i] ?? 0;
+    const m = minParts[i] ?? 0;
+    if (c !== m) return c > m;
+  }
+  return true;
+}
+
 /** Derive the running-services list from a containers snapshot. */
 export function computeServices(containers: Container[]): ServiceInfo[] {
   const services: ServiceInfo[] = [];

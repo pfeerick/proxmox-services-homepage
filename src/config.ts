@@ -41,6 +41,15 @@ export function readServices(dir: string = APP_DIR): ServiceMap {
   return parsed.services ?? {};
 }
 
+/** Reads the Bun version pinned in .mise.toml, or null if absent/unset. */
+export function readMinBunVersion(dir: string = APP_DIR): string | null {
+  const path = join(dir, ".mise.toml");
+  if (!existsSync(path)) return null;
+  const text = readFileSync(path, "utf-8");
+  const parsed = Bun.TOML.parse(text) as { tools?: { bun?: string } };
+  return parsed.tools?.bun ?? null;
+}
+
 export let config: AppConfig = readConfig();
 export let serviceMap: ServiceMap = readServices();
 

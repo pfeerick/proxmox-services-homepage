@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mtimeOf, readConfig, readServices } from "../src/config.ts";
+import { mtimeOf, readConfig, readMinBunVersion, readServices } from "../src/config.ts";
 
 function makeTmpDir(): string {
   return mkdtempSync(join(tmpdir(), "proxmox-test-"));
@@ -89,6 +89,25 @@ description = "An app"
     const dir = makeTmpDir();
     writeFileSync(join(dir, "services.toml"), '[other]\nkey = "value"\n');
     expect(readServices(dir)).toEqual({});
+  });
+});
+
+describe("readMinBunVersion", () => {
+  it("returns null when .mise.toml is missing", () => {
+    const dir = makeTmpDir();
+    expect(readMinBunVersion(dir)).toBeNull();
+  });
+
+  it("returns null when the bun key is absent", () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, ".mise.toml"), '[tools]\nnode = "20"\n');
+    expect(readMinBunVersion(dir)).toBeNull();
+  });
+
+  it("reads the pinned bun version", () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, ".mise.toml"), '[tools]\nbun = "1.3.14"\n');
+    expect(readMinBunVersion(dir)).toBe("1.3.14");
   });
 });
 

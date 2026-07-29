@@ -1,12 +1,20 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { checkHealth, getCache } from "./cache.ts";
-import { APP_DIR, config, startFileWatcher } from "./config.ts";
+import { APP_DIR, config, readMinBunVersion, startFileWatcher } from "./config.ts";
 import { createSSEStream } from "./sse.ts";
-import { computeServices } from "./utils.ts";
+import { computeServices, satisfiesMinVersion } from "./utils.ts";
 
 // Importing cache.ts starts the background refresh loop (side effect at module level)
 import "./cache.ts";
+
+const minBunVersion = readMinBunVersion();
+if (minBunVersion && !satisfiesMinVersion(Bun.version, minBunVersion)) {
+  console.error(
+    `❌ Bun ${minBunVersion}+ required (running ${Bun.version}). Update Bun and try again.`,
+  );
+  process.exit(1);
+}
 
 const staticDir = join(APP_DIR, "static");
 
