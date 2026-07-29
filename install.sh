@@ -52,24 +52,7 @@ fi
 # ---------------------------------------------------------------------------
 heading "Installing system dependencies"
 apt-get update -qq
-apt-get install -y -qq git curl
-
-# ---------------------------------------------------------------------------
-# uv
-# ---------------------------------------------------------------------------
-heading "Checking uv"
-UV_BIN=""
-for candidate in /root/.local/bin/uv /usr/local/bin/uv; do
-    [[ -x "$candidate" ]] && UV_BIN="$candidate" && break
-done
-
-if [[ -z "$UV_BIN" ]]; then
-    info "Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    UV_BIN="/root/.local/bin/uv"
-else
-    info "uv found at $UV_BIN"
-fi
+apt-get install -y -qq git curl unzip
 
 # ---------------------------------------------------------------------------
 # Clone or update repo
@@ -84,54 +67,83 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Python dependencies
+# Bun (pinned to the version in .mise.toml, so deploys match tested dev builds)
 # ---------------------------------------------------------------------------
-heading "Installing Python dependencies"
-"$UV_BIN" sync --project "$INSTALL_DIR"
+heading "Checking Bun"
+PINNED_BUN_VERSION=""
+if [[ -f "$INSTALL_DIR/.mise.toml" ]]; then
+    PINNED_BUN_VERSION=$(grep -E '^bun[[:space:]]*=' "$INSTALL_DIR/.mise.toml" | sed -E 's/.*"([^"]+)".*/\1/')
+fi
+
+BUN_BIN=""
+for candidate in /root/.bun/bin/bun /usr/local/bin/bun; do
+    [[ -x "$candidate" ]] && BUN_BIN="$candidate" && break
+done
+CURRENT_BUN_VERSION=""
+[[ -n "$BUN_BIN" ]] && CURRENT_BUN_VERSION="$("$BUN_BIN" --version)"
+
+if [[ -n "$BUN_BIN" && "$CURRENT_BUN_VERSION" == "$PINNED_BUN_VERSION" ]]; then
+    info "Bun v$CURRENT_BUN_VERSION found at $BUN_BIN (matches pinned version)"
+elif [[ -n "$PINNED_BUN_VERSION" ]]; then
+    info "Installing Bun v$PINNED_BUN_VERSION (pinned in .mise.toml)..."
+    curl -fsSL https://bun.sh/install | bash -s "bun-v$PINNED_BUN_VERSION"
+    BUN_BIN="/root/.bun/bin/bun"
+else
+    warn "No .mise.toml found — installing latest Bun"
+    curl -fsSL https://bun.sh/install | bash
+    BUN_BIN="/root/.bun/bin/bun"
+fi
+
+# ---------------------------------------------------------------------------
+# Dependencies and JS bundle
+# ---------------------------------------------------------------------------
+heading "Installing dependencies"
+"$BUN_BIN" install --cwd "$INSTALL_DIR"
+
+heading "Building frontend bundle"
+"$BUN_BIN" run --cwd "$INSTALL_DIR" build
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 heading "Configuration"
-CONFIG_FILE="$INSTALL_DIR/config.yaml"
+CONFIG_FILE="$INSTALL_DIR/config.toml"
 
 if [[ -f "$CONFIG_FILE" ]]; then
-    info "config.yaml already exists — skipping (edit $CONFIG_FILE to change settings)"
+    info "config.toml already exists — skipping (edit $CONFIG_FILE to change settings)"
 else
-    info "No config.yaml found — let's create one."
+    info "No config.toml found — let's create one."
     echo
 
-    ask       "Proxmox host and port (e.g. 192.168.0.1:8006)" PROXMOX_HOST
-    ask       "API user (e.g. dashboard@pam!token)"           PROXMOX_USER
-    ask       "API token secret"                               PROXMOX_TOKEN
-    ask_default "Dashboard port"                              DASHBOARD_PORT "8080"
-    ask_default "Dashboard title"                             DASHBOARD_TITLE "Proxmox Container Dashboard"
-    ask_default "Cache refresh interval (seconds)"           REFRESH_SECS "30"
+    ask         "Proxmox host and port (e.g. 192.168.0.1:8006)" PROXMOX_HOST
+    ask         "API user (e.g. dashboard@pam!token)"            PROXMOX_USER
+    ask         "API token secret"                                PROXMOX_TOKEN
+    ask_default "Dashboard port"                                  DASHBOARD_PORT "8000"
+    ask_default "Dashboard title"                                 DASHBOARD_TITLE "Proxmox Container Dashboard"
+    ask_default "Cache refresh interval (seconds)"               REFRESH_SECS "30"
 
-    cp "$INSTALL_DIR/config.yaml.example" "$CONFIG_FILE"
+    cat > "$CONFIG_FILE" << TOMLEOF
+[proxmox]
+host = "$PROXMOX_HOST"
+user = "$PROXMOX_USER"
+token = "$PROXMOX_TOKEN"
+ssl_verify = false
+
+[server]
+host = "0.0.0.0"
+port = $DASHBOARD_PORT
+
+[dashboard]
+auto_refresh_seconds = $REFRESH_SECS
+title = "$DASHBOARD_TITLE"
+TOMLEOF
+
     chmod 600 "$CONFIG_FILE"
-
-    # Fill in values using Python (avoids sed quoting pitfalls with special chars)
-    "$UV_BIN" run --project "$INSTALL_DIR" python3 - <<PYEOF
-import yaml, sys
-
-with open("$CONFIG_FILE") as f:
-    cfg = yaml.safe_load(f)
-
-cfg["proxmox"]["host"]  = "$PROXMOX_HOST"
-cfg["proxmox"]["user"]  = "$PROXMOX_USER"
-cfg["proxmox"]["token"] = "$PROXMOX_TOKEN"
-cfg["flask"]["port"]    = int("$DASHBOARD_PORT")
-cfg["flask"]["debug"]   = False
-cfg["dashboard"]["auto_refresh_seconds"] = int("$REFRESH_SECS")
-cfg["dashboard"]["title"] = "$DASHBOARD_TITLE"
-
-with open("$CONFIG_FILE", "w") as f:
-    yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True)
-
-print("    config.yaml written.")
-PYEOF
+    info "config.toml written."
 fi
+
+# Read port for the summary at the end
+DASHBOARD_PORT=$(awk '/^\[server\]/{s=1} s && /^port/{print $3; exit}' "$CONFIG_FILE" 2>/dev/null || echo "8000")
 
 # ---------------------------------------------------------------------------
 # Systemd service
@@ -145,10 +157,10 @@ After=network.target
 
 [Service]
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$UV_BIN run --project $INSTALL_DIR dashboard
+ExecStart=$BUN_BIN run $INSTALL_DIR/src/index.ts
 Restart=always
 RestartSec=5
-Environment=PATH=/root/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin
 
 [Install]
 WantedBy=multi-user.target
@@ -171,8 +183,7 @@ After=network.target
 [Service]
 Type=oneshot
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/git -C $INSTALL_DIR pull
-ExecStart=$UV_BIN sync --project $INSTALL_DIR
+ExecStart=/bin/bash $INSTALL_DIR/install.sh
 ExecStartPost=/bin/systemctl restart dashboard
 EOF
 
@@ -196,16 +207,9 @@ fi
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
-PORT=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    cfg = yaml.safe_load(f)
-print(cfg['flask']['port'])
-" 2>/dev/null || echo "8080")
-
 echo
 echo -e "\e[1;32m✓ Done!\e[0m"
-echo "  Dashboard: http://$(hostname -I | awk '{print $1}'):${PORT}"
+echo "  Dashboard: http://$(hostname -I | awk '{print $1}'):${DASHBOARD_PORT}"
 echo "  Config:    $CONFIG_FILE"
 echo "  Logs:      journalctl -u dashboard -f"
 echo

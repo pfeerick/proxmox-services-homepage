@@ -3,13 +3,24 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ config.title }}</title>
-        <link rel="stylesheet"
-              href="{{ url_for('static', filename='css/dashboard.css') }}">
+        <title>{{TITLE}}</title>
+        <script>
+            // Applied before first paint to avoid a flash of the wrong theme.
+            (function () {
+                try {
+                    var override = localStorage.getItem("theme");
+                    if (override === "light" || override === "dark") {
+                        document.documentElement.setAttribute("data-theme", override);
+                    }
+                } catch (e) {}
+            })();
+        </script>
+        <link rel="stylesheet" href="/static/css/dashboard.css">
     </head>
     <body>
         <div class="header">
-            <h1>🏠 {{ config.title }}</h1>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle color theme"></button>
+            <h1>🏠 {{TITLE}}</h1>
             <nav class="view-nav">
                 <a href="#" class="view-btn active" data-view="services">🏠 Services</a>
                 <a href="#detailed" class="view-btn" data-view="detailed">🖥️ Detailed</a>
@@ -67,6 +78,6 @@
                 <div id="containers-grid" class="container-grid"></div>
             </div>
         </div>
-        <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+        <script type="module" src="/static/js/{{SCRIPT}}"></script>
     </body>
 </html>

@@ -1,0 +1,19 @@
+{
+  "name": "proxmox-services-homepage",
+  "version": "0.4.0",
+  "description": "Proxmox LXC container service dashboard",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "test": "bun test",
+    "build": "bun build static/js/app.js --outfile static/js/bundle.js --minify",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

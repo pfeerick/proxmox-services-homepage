@@ -1,6 +1,6 @@
 # Proxmox Services Homepage
 
-A dynamic web dashboard for Proxmox VE that displays all running LXC containers and their services as clickable links. Automatically discovers container IPs via the Proxmox API and matches them to service definitions in `services.yaml`.
+A dynamic web dashboard for Proxmox VE that displays all running LXC containers and their services as clickable links. Automatically discovers container IPs via the Proxmox API and matches them to service definitions in `services.toml`.
 
 
 ## Features
@@ -9,7 +9,7 @@ A dynamic web dashboard for Proxmox VE that displays all running LXC containers 
 - **Service matching** — maps container names to service definitions (port, icon, description)
 - **Two views** — a clean card-based service launcher and a detailed container info view, toggled via `/#detailed`
 - **Real-time updates** — SSE push from the server the moment the cache refreshes; no polling lag
-- **Live config reload** — edit `config.yaml` or `services.yaml` and changes are picked up without restarting
+- **Live config reload** — edit `config.toml` or `services.toml` and changes are picked up without restarting
 - **JSON API** — `/api/containers` and `/api/services` endpoints for integration with other tools
 
 
@@ -23,8 +23,7 @@ A dynamic web dashboard for Proxmox VE that displays all running LXC containers 
 
 ## Requirements
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- [Bun](https://bun.sh/) v1.0+
 - A Proxmox VE instance with API access
 - A Proxmox API token with at least `PVEAuditor` role on `/`
 
@@ -50,54 +49,52 @@ pveum user token add dashboard@pam dashboard --privsep 0
 
 Or reuse an existing token that has `PVEAuditor` on `/`.
 
-### config.yaml
+### config.toml
 
 Copy the example and fill in your details:
 
 ```bash
-cp config.yaml.example config.yaml
-chmod 600 config.yaml   # restrict access — the file contains your API token
+cp config.toml.example config.toml
+chmod 600 config.toml   # restrict access — the file contains your API token
 ```
 
-`config.yaml` is git-ignored so your API token won't be accidentally committed. `config.yaml.example` is the committed template.
+`config.toml` is git-ignored so your API token won't be accidentally committed. `config.toml.example` is the committed template.
 
-```yaml
-proxmox:
-  host: "192.168.0.1:8006"      # Proxmox host IP and port
-  user: "dashboard@pam!token"   # user@realm!tokenname
-  token: "your-token-secret"    # Token secret from Proxmox
-  ssl_verify: false             # false = skip verification (default, for self-signed certs)
-                                # true  = verify against system CA bundle
-                                # "/path/to/ca.pem" = verify against a custom CA cert
+```toml
+[proxmox]
+host = "192.168.0.1:8006"     # Proxmox host IP and port
+user = "dashboard@pam!token"  # user@realm!tokenname
+token = "your-token-secret"   # Token secret from Proxmox
+ssl_verify = false             # false = skip verification (default, for self-signed certs)
+                               # true  = verify against system CA bundle
+                               # "/path/to/ca.pem" = verify against a custom CA cert
 
-flask:
-  host: "0.0.0.0"
-  port: 8080                    # Change to 80 for no-port access
-  debug: false                  # true = Werkzeug dev server with reloader; false = Waitress
+[server]
+host = "0.0.0.0"
+port = 8000                    # Change to 80 for no-port access
 
-dashboard:
-  auto_refresh_seconds: 30
-  title: "Proxmox Container Dashboard"
+[dashboard]
+auto_refresh_seconds = 30
+title = "Proxmox Container Dashboard"
 ```
 
-### services.yaml
+### services.toml
 
-Maps LXC container names to their service information. Containers not listed here will still appear in the detailed view but won't have a service link. Containers with `port: null` are skipped in the service view.
+Maps LXC container names to their service information. Containers not listed here will still appear in the detailed view but won't have a service link. Containers without a `port` are skipped in the service view.
 
-```yaml
-services:
-  jellyfin:
-    port: 8096
-    name: "Jellyfin"
-    icon: "🎬"
-    description: "Media Server"
+```toml
+[services.jellyfin]
+port = 8096
+name = "Jellyfin"
+icon = "🎬"
+description = "Media Server"
 
-  myservice:
-    port: 8080
-    name: "My Service"
-    icon: "🔧"
-    description: "Description here"
-    protocol: "https"   # Optional, defaults to http
+[services.myservice]
+port = 8080
+name = "My Service"
+icon = "🔧"
+description = "Description here"
+protocol = "https"   # Optional, defaults to http
 ```
 
 ---
@@ -113,18 +110,18 @@ Run directly on your local machine to access the dashboard from your desktop. Re
 git clone https://github.com/pfeerick/proxmox-services-homepage.git
 cd proxmox-services-homepage
 
-# Install dependencies
-uv sync
+# Install dev dependencies
+bun install
 
 # Configure
-cp config.yaml.example config.yaml
-# Edit config.yaml with your Proxmox details
+cp config.toml.example config.toml
+# Edit config.toml with your Proxmox details
 
-# Run
-uv run dashboard
+# Run (with auto-reload on source changes)
+bun run dev
 ```
 
-Access at `http://localhost:8080` (or whichever port you configured).
+Access at `http://localhost:8000` (or whichever port you configured).
 
 ---
 
@@ -151,13 +148,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pfeerick/proxmox-services-ho
 ```
 
 The installer will:
-- Install `git`, `curl`, and `uv`
+- Install `git`, `curl`, and `bun`
 - Clone the repo to `/opt/dashboard`
 - Prompt for your Proxmox host, API credentials, port, and title
-- Write `config.yaml` and create/enable the systemd service
+- Write `config.toml` and create/enable the systemd service
 - Optionally set up a daily auto-update timer
 
-Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8080` depending on the port you chose.
+Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8000` depending on the port you chose.
 
 > **Updating** — re-run the installer at any time; it detects an existing install and pulls the latest changes instead of cloning.
 
@@ -235,15 +232,14 @@ No port needed if running on port 80. Accessible from any device on your tailnet
 ## Adding a New Service
 
 1. Deploy your LXC with a recognisable hostname (e.g. `myapp`)
-2. Add an entry to `services.yaml`:
+2. Add an entry to `services.toml`:
 
-```yaml
-services:
-  myapp:
-    port: 3000
-    name: "My App"
-    icon: "🚀"
-    description: "My new service"
+```toml
+[services.myapp]
+port = 3000
+name = "My App"
+icon = "🚀"
+description = "My new service"
 ```
 
 3. The dashboard will pick it up automatically on the next refresh — no restart needed.

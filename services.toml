@@ -1,0 +1,133 @@
+# Service definitions for Proxmox LXC containers
+# Maps container names to their service information.
+# Use [services.<container-name>] for each entry.
+
+[services.paperless-ngx]
+port = 8000
+name = "Paperless-NGX"
+icon = "📄"
+description = "Document Management"
+
+[services.wikijs]
+port = 3000
+name = "Wiki.js"
+icon = "📖"
+description = "Wiki Platform"
+
+[services.homer]
+port = 8010
+name = "Homer Dashboard"
+icon = "🏠"
+description = "Static Dashboard"
+
+[services.code-server]
+port = 8080
+name = "VS Code Server"
+icon = "💻"
+description = "Web-based IDE"
+
+[services.syncthing]
+port = 8384
+name = "Syncthing"
+icon = "🔄"
+description = "File Synchronization"
+
+[services.adguard]
+port = 3000
+name = "AdGuard Home"
+icon = "🛡️"
+description = "DNS Ad Blocker"
+
+[services.jellyfin]
+port = 8096
+name = "Jellyfin"
+icon = "🎬"
+description = "Media Server"
+
+[services.cloudflared]
+# No web interface — omit port so this entry is excluded from the services view
+name = "Cloudflare Tunnel"
+icon = "☁️"
+description = "Tunnel Service"
+
+[services.unifi]
+port = 8443
+name = "UniFi Controller"
+icon = "📶"
+description = "Network Controller"
+protocol = "https"
+
+[services.unifi-os-server]
+port = 11443
+name = "UniFi OS"
+icon = "🖥️"
+description = "UniFi OS Interface"
+protocol = "https"
+
+[services.navidrome]
+port = 4533
+name = "Navidrome"
+icon = "🎵"
+description = "Music Server"
+
+[services.dashy]
+port = 4000
+name = "Dashy Dashboard"
+icon = "📊"
+description = "Dashboard"
+
+[services.homebox]
+port = 7745
+name = "Homebox"
+icon = "📦"
+description = "Home Inventory"
+
+[services.myspeed]
+port = 5216
+name = "MySpeed"
+icon = "⚡"
+description = "Speed Test"
+
+[services.pulse]
+port = 7655
+name = "Pulse"
+icon = "💓"
+description = "Proxmox Monitor"
+
+[services.homepage]
+port = 3000
+name = "Homepage"
+icon = "🏡"
+description = "Dashboard"
+
+[services.wallos]
+port = 80
+name = "Wallos"
+icon = "💳"
+description = "Subscription Tracker"
+
+[services.immich]
+port = 2283
+name = "Immich"
+icon = "📸"
+description = "Photo Management"
+
+[services.gitea]
+port = 3000
+name = "Gitea"
+icon = "🍵"
+description = "Git Server"
+
+[services.linkwarden]
+port = 3000
+name = "Linkwarden"
+icon = "🔗"
+description = "Bookmark Manager"
+
+# Add more services below as you deploy new containers:
+# [services.my-app]
+# port = 1234
+# name = "My App"
+# icon = "🔸"
+# description = "Short description"
+# protocol = "https"  # optional, defaults to "http"
