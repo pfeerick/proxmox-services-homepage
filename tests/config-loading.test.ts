@@ -2,7 +2,13 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mtimeOf, readConfig, readMinBunVersion, readServices } from "../src/config.ts";
+import {
+  mtimeOf,
+  readConfig,
+  readMinBunVersion,
+  readServices,
+  readVersionInfo,
+} from "../src/config.ts";
 
 function makeTmpDir(): string {
   return mkdtempSync(join(tmpdir(), "proxmox-test-"));
@@ -149,6 +155,27 @@ describe("readMinBunVersion", () => {
     const dir = makeTmpDir();
     writeFileSync(join(dir, ".mise.toml"), '[tools]\nbun = "1.3.14"\n');
     expect(readMinBunVersion(dir)).toBe("1.3.14");
+  });
+});
+
+describe("readVersionInfo", () => {
+  it("falls back to 0.0.0 when package.json is missing", () => {
+    const dir = makeTmpDir();
+    const result = readVersionInfo(dir);
+    expect(result.version).toBe("0.0.0");
+    expect(result.commit).toBeNull();
+  });
+
+  it("reads the version from package.json", () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ version: "1.2.3" }));
+    expect(readVersionInfo(dir).version).toBe("1.2.3");
+  });
+
+  it("has a null commit outside of a git checkout", () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ version: "1.2.3" }));
+    expect(readVersionInfo(dir).commit).toBeNull();
   });
 });
 

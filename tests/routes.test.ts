@@ -124,6 +124,7 @@ describe("GET /", () => {
     expect(html).toContain("<title>My Homelab</title>");
     expect(html).not.toContain("{{TITLE}}");
     expect(html).not.toContain("{{SCRIPT}}");
+    expect(html).not.toContain("{{VERSION}}");
   });
 
   it("escapes HTML in the configured title", async () => {

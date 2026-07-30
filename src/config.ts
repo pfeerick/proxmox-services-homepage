@@ -75,8 +75,36 @@ export function readMinBunVersion(dir: string = APP_DIR): string | null {
   return parsed.tools?.bun ?? null;
 }
 
+export interface VersionInfo {
+  version: string;
+  /** Short git commit hash, or null when `dir` isn't a git checkout (e.g. a tarball deploy). */
+  commit: string | null;
+}
+
+/** Reads the app version from package.json, plus the current git short SHA if available. */
+export function readVersionInfo(dir: string = APP_DIR): VersionInfo {
+  const path = join(dir, "package.json");
+  const version = existsSync(path)
+    ? ((JSON.parse(readFileSync(path, "utf-8")) as { version?: string }).version ?? "0.0.0")
+    : "0.0.0";
+
+  let commit: string | null = null;
+  try {
+    const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
+      cwd: dir,
+      stderr: "ignore",
+    });
+    if (proc.success) commit = proc.stdout.toString().trim() || null;
+  } catch {
+    // git not installed — fall back to version-only.
+  }
+
+  return { version, commit };
+}
+
 export let config: AppConfig = readConfig();
 export let serviceMap: ServiceMap = readServices();
+export const versionInfo: VersionInfo = readVersionInfo();
 
 let reloadCallback: (() => void) | null = null;
 

@@ -1,5 +1,5 @@
 import { startRefreshLoop } from "./cache.ts";
-import { config, readMinBunVersion, startFileWatcher } from "./config.ts";
+import { config, readMinBunVersion, startFileWatcher, versionInfo } from "./config.ts";
 import { handleRequest } from "./router.ts";
 import { satisfiesMinVersion } from "./utils.ts";
 
@@ -23,4 +23,9 @@ const server = Bun.serve({
   },
 });
 
-console.log(`🚀 Proxmox Dashboard running at http://${server.hostname}:${server.port}`);
+const versionLabel = versionInfo.commit
+  ? `v${versionInfo.version} (${versionInfo.commit})`
+  : `v${versionInfo.version}`;
+console.log(
+  `🚀 Proxmox Dashboard ${versionLabel} running at http://${server.hostname}:${server.port}`,
+);

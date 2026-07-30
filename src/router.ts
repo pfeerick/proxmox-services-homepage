@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { checkHealth, getCache } from "./cache.ts";
-import { APP_DIR, config } from "./config.ts";
+import { APP_DIR, config, versionInfo } from "./config.ts";
 import { createSSEStream, serializeSnapshot } from "./sse.ts";
 import { computeServices, escapeHtml } from "./utils.ts";
 
@@ -20,7 +20,13 @@ async function serveIndex(): Promise<Response> {
   // <title> and the <h1> — escaping keeps an innocent "<" or quote from breaking
   // the page (or worse) rather than trusting the file to be well-behaved.
   const title = escapeHtml(config.dashboard.title);
-  const html = indexHtmlCache.replaceAll("{{TITLE}}", title).replaceAll("{{SCRIPT}}", scriptFile);
+  const version = versionInfo.commit
+    ? `v${versionInfo.version} (${versionInfo.commit})`
+    : `v${versionInfo.version}`;
+  const html = indexHtmlCache
+    .replaceAll("{{TITLE}}", title)
+    .replaceAll("{{SCRIPT}}", scriptFile)
+    .replaceAll("{{VERSION}}", version);
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 

@@ -271,6 +271,15 @@ body {
   margin-bottom: 10px;
 }
 
+/* --- Footer --- */
+.footer {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8em;
+  margin-top: 40px;
+  padding-bottom: 10px;
+}
+
 /* --- Containers view --- */
 .last-updated {
   text-align: center;
