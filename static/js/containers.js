@@ -98,7 +98,7 @@ function createQuickLinks(container) {
 
   let links = "";
 
-  if (container.service && container.service.port) {
+  if (container.service?.port) {
     const protocol = container.service.protocol === "https" ? "https" : "http";
     links += `<a href="${protocol}://${escapeHtml(container.ip)}:${parseInt(
       container.service.port,
