@@ -5,9 +5,11 @@ let currentServices = [];
 export function hasServicesChanged(data) {
   const newServices = data.services;
   if (newServices.length !== currentServices.length) return true;
+  // Every field that renderServices puts on the page must appear here, or a change
+  // to it won't repaint — container_name feeds each card's title tooltip.
   const fingerprint = (services) =>
     services
-      .map((s) => `${s.url}|${s.name}|${s.icon}|${s.description}`)
+      .map((s) => `${s.url}|${s.name}|${s.icon}|${s.description}|${s.container_name}`)
       .sort()
       .join(",");
   return fingerprint(currentServices) !== fingerprint(newServices);

@@ -67,7 +67,7 @@ export function renderContainers(data) {
     .join("");
 }
 
-function formatUptime(seconds) {
+export function formatUptime(seconds) {
   if (!seconds) return null;
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
@@ -77,7 +77,7 @@ function formatUptime(seconds) {
   return `${m}m`;
 }
 
-function formatMemory(used, max) {
+export function formatMemory(used, max) {
   if (!max) return null;
   const usedMB = Math.round(used / 1048576);
   const maxMB = Math.round(max / 1048576);
@@ -87,7 +87,7 @@ function formatMemory(used, max) {
   return `${usedMB} / ${maxMB} MB`;
 }
 
-function createQuickLinks(container) {
+export function createQuickLinks(container) {
   if (container.status !== "running") return "";
 
   if (container.ip === "DHCP/Unknown") {
