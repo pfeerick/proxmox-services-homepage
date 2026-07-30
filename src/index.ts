@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { checkHealth, getCache } from "./cache.ts";
 import { APP_DIR, config, readMinBunVersion, startFileWatcher } from "./config.ts";
 import { createSSEStream } from "./sse.ts";
-import { computeServices, satisfiesMinVersion } from "./utils.ts";
+import { computeServices, escapeHtml, satisfiesMinVersion } from "./utils.ts";
 
 // Importing cache.ts starts the background refresh loop (side effect at module level)
 import "./cache.ts";
@@ -27,7 +27,10 @@ async function serveIndex(): Promise<Response> {
   if (!indexHtmlCache) {
     indexHtmlCache = await Bun.file(join(staticDir, "index.html")).text();
   }
-  const title = config.dashboard.title;
+  // The title is operator-supplied config, not user input, but it lands in both
+  // <title> and the <h1> — escaping keeps an innocent "<" or quote from breaking
+  // the page (or worse) rather than trusting the file to be well-behaved.
+  const title = escapeHtml(config.dashboard.title);
   const html = indexHtmlCache.replaceAll("{{TITLE}}", title).replaceAll("{{SCRIPT}}", scriptFile);
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }

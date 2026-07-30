@@ -1,5 +1,15 @@
 import type { Container, ServiceDefinition, ServiceInfo, ServiceMap } from "./types.ts";
 
+/** Escape a string for safe interpolation into HTML text or a quoted attribute. */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Extract a static IP from a Proxmox LXC network config string, or return null. */
 export function extractIpFromConfig(lxcConfig: Record<string, unknown>): string | null {
   for (const [key, value] of Object.entries(lxcConfig)) {
