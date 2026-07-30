@@ -43,4 +43,31 @@ describe("getServiceInfo", () => {
   it("returns null when service map is empty", () => {
     expect(getServiceInfo("jellyfin", {})).toBeNull();
   });
+
+  describe("overlapping prefixes", () => {
+    // Mirrors the real services.toml, where `unifi` is declared before
+    // `unifi-os-server` — first-match-wins sent unifi-os-server-* to the
+    // UniFi Controller on 8443 instead of UniFi OS on 11443.
+    const OVERLAPPING: ServiceMap = {
+      unifi: { port: 8443, name: "UniFi Controller", icon: "📶", description: "Network" },
+      "unifi-os-server": { port: 11443, name: "UniFi OS", icon: "🖥️", description: "UniFi OS" },
+    };
+
+    it("prefers the longest matching prefix over definition order", () => {
+      const result = getServiceInfo("unifi-os-server-2", OVERLAPPING);
+      expect(result?.name).toBe("UniFi OS");
+      expect(result?.port).toBe(11443);
+    });
+
+    it("still matches the shorter prefix when the longer one doesn't apply", () => {
+      const result = getServiceInfo("unifi-controller-backup", OVERLAPPING);
+      expect(result?.name).toBe("UniFi Controller");
+      expect(result?.port).toBe(8443);
+    });
+
+    it("exact matches still win outright", () => {
+      expect(getServiceInfo("unifi", OVERLAPPING)?.name).toBe("UniFi Controller");
+      expect(getServiceInfo("unifi-os-server", OVERLAPPING)?.name).toBe("UniFi OS");
+    });
+  });
 });

@@ -17,16 +17,27 @@ export function extractIpFromConfig(lxcConfig: Record<string, unknown>): string 
   return null;
 }
 
-/** Look up service info for a container by exact name or prefix match. */
+/**
+ * Look up service info for a container: exact name first, then longest prefix.
+ *
+ * Longest wins because the first match would otherwise be decided by definition
+ * order in services.toml — a container named `unifi-os-server-2` matched `unifi`
+ * (UniFi Controller, 8443) rather than `unifi-os-server` (UniFi OS, 11443) purely
+ * because `unifi` was declared first.
+ */
 export function getServiceInfo(
   containerName: string,
   serviceMap: ServiceMap,
 ): ServiceDefinition | null {
   if (containerName in serviceMap) return serviceMap[containerName];
+
+  let bestMatch: string | null = null;
   for (const serviceName of Object.keys(serviceMap)) {
-    if (containerName.startsWith(serviceName)) return serviceMap[serviceName];
+    if (!containerName.startsWith(serviceName)) continue;
+    if (bestMatch === null || serviceName.length > bestMatch.length) bestMatch = serviceName;
   }
-  return null;
+
+  return bestMatch === null ? null : serviceMap[bestMatch];
 }
 
 /** True if `current` (e.g. "1.3.14") is >= `min`, comparing major.minor.patch numerically. */
