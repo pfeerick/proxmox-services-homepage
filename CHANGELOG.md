@@ -1,3 +1,9 @@
+## v0.7.0 (2026-07-30)
+
+### Feat
+
+- show app version and git commit in startup log and dashboard
+
 ## v0.6.0 (2026-07-30)
 
 ### Feat
