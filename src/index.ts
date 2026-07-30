@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { checkHealth, getCache } from "./cache.ts";
 import { APP_DIR, config, readMinBunVersion, startFileWatcher } from "./config.ts";
-import { createSSEStream } from "./sse.ts";
+import { createSSEStream, serializeSnapshot } from "./sse.ts";
 import { computeServices, escapeHtml, satisfiesMinVersion } from "./utils.ts";
 
 // Importing cache.ts starts the background refresh loop (side effect at module level)
@@ -77,13 +77,9 @@ const server = Bun.serve({
 
       const { containers, last_updated } = getCache();
       const ts = last_updated ?? new Date().toISOString();
-      const services = computeServices(containers);
-      const initial =
-        `event: containers\ndata: ${JSON.stringify({ containers, last_updated: ts, total: containers.length })}\n\n` +
-        `event: services\ndata: ${JSON.stringify({ services, last_updated: ts, total: services.length })}\n\n`;
 
       return new Response(
-        createSSEStream(() => initial),
+        createSSEStream(() => serializeSnapshot(containers, ts)),
         {
           headers: {
             "Content-Type": "text/event-stream",
