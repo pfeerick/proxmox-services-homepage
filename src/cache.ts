@@ -1,8 +1,7 @@
 import { config, onReload, serviceMap } from "./config.ts";
 import { ProxmoxAPI } from "./proxmox.ts";
-import { pushToSubscribers } from "./sse.ts";
+import { pushToSubscribers, serializeSnapshot } from "./sse.ts";
 import type { Container } from "./types.ts";
-import { computeServices } from "./utils.ts";
 
 export interface CacheSnapshot {
   containers: Container[];
@@ -74,11 +73,7 @@ async function refreshLoop(): Promise<never> {
     const last_updated = new Date().toISOString();
     cache = { containers, last_updated };
 
-    const services = computeServices(containers);
-    pushToSubscribers(
-      `event: containers\ndata: ${JSON.stringify({ containers, last_updated, total: containers.length })}\n\n` +
-        `event: services\ndata: ${JSON.stringify({ services, last_updated, total: services.length })}\n\n`,
-    );
+    pushToSubscribers(serializeSnapshot(containers, last_updated));
 
     await waitOrTrigger(interval);
   }
