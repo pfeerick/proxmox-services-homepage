@@ -189,9 +189,12 @@ The installer will:
 - Write `config.toml` (mode 600) and create/enable the systemd service
 - Optionally set up a daily auto-update timer
 
-Access at `http://<lxc-ip>:8000`, or on whichever port you entered at the prompt.
-To serve on port 80 so no port is needed in the URL, enter `80` when asked for the
-dashboard port.
+Access at `http://<lxc-ip>` — the installer defaults to port 80 so no port is needed
+in the URL. Enter a different port at the prompt if something else in the container
+already serves 80.
+
+> Local development defaults to port 8000 instead (`config.toml.example`), because
+> binding port 80 requires root and `bun run dev` normally isn't run as root.
 
 > **Updating** — re-run the installer at any time; it detects an existing install,
 > pulls the latest changes, rebuilds, and restarts the service. Your `config.toml`
@@ -252,7 +255,7 @@ With MagicDNS and HTTPS enabled in your [Tailscale admin console](https://login.
 https://dashboard.your-tailnet.ts.net
 ```
 
-No port needed if running on port 80. Accessible from any device on your tailnet — including mobile via the Tailscale app.
+No port is needed in the URL, since the installer defaults to port 80. Accessible from any device on your tailnet — including mobile via the Tailscale app.
 
 ---
 
