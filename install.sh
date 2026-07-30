@@ -171,8 +171,15 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now dashboard
-info "Service started."
+systemctl enable dashboard
+# `enable --now` is a no-op against an already-running unit, so an update would
+# leave the old code running. Restart explicitly to pick up the pulled changes.
+systemctl restart dashboard
+if $IS_UPDATE; then
+    info "Service restarted."
+else
+    info "Service started."
+fi
 
 # ---------------------------------------------------------------------------
 # Optional: daily auto-update timer
@@ -188,7 +195,6 @@ After=network.target
 Type=oneshot
 WorkingDirectory=$INSTALL_DIR
 ExecStart=/bin/bash $INSTALL_DIR/install.sh
-ExecStartPost=/bin/systemctl restart dashboard
 EOF
 
     cat > "$UPDATE_TIMER_FILE" << EOF
