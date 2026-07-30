@@ -22,9 +22,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  # .mise.toml is the single source of truth for the Bun version, and src/index.ts
+  # refuses to start below it. setup-bun's bun-version-file only understands
+  # package.json / .tool-versions / .bumrc / .bun-version, so read it out here and
+  # feed the result to every job as an explicit bun-version.
+  bun-version:
+    name: Resolve pinned Bun version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read pinned version from .mise.toml
+        id: read
+        run: |
+          version=$(grep -E '^bun[[:space:]]*=' .mise.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [[ -z "$version" ]]; then
+            echo "::error file=.mise.toml::No pinned bun version found"
+            exit 1
+          fi
+          echo "Pinned Bun version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   lint:
     name: Lint (Biome)
     runs-on: ubuntu-latest
+    needs: bun-version
 
     steps:
       - name: Check out repository
@@ -32,6 +58,8 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.bun-version.outputs.version }}
 
       - name: Install dependencies
         run: bun install
@@ -42,6 +70,7 @@ jobs:
   unit:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: bun-version
 
     steps:
       - name: Check out repository
@@ -49,6 +78,8 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.bun-version.outputs.version }}
 
       - name: Install dependencies
         run: bun install
@@ -59,6 +90,7 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    needs: bun-version
 
     steps:
       - name: Check out repository
@@ -66,9 +98,36 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.bun-version.outputs.version }}
 
       - name: Install dependencies
         run: bun install
 
       - name: TypeScript type check
         run: bun tsc --noEmit
+
+  build:
+    name: Build Frontend Bundle
+    runs-on: ubuntu-latest
+    needs: bun-version
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.bun-version.outputs.version }}
+
+      - name: Install dependencies
+        run: bun install
+
+      # install.sh builds this on every deploy, so a broken bundle would otherwise
+      # only surface on a user's machine mid-install.
+      - name: Build bundle
+        run: bun run build
+
+      - name: Verify bundle was produced
+        run: test -s static/js/bundle.js
