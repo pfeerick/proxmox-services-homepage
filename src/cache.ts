@@ -25,6 +25,11 @@ export function getCache(): CacheSnapshot {
   return cache;
 }
 
+/** Replace the current snapshot. Written by the refresh loop; seeded by tests. */
+export function setCache(snapshot: CacheSnapshot): void {
+  cache = snapshot;
+}
+
 // /health is unauthenticated, and each call previously hit the Proxmox API — so
 // anything hammering the endpoint (an over-eager uptime monitor, or a hostile
 // client) turned into the same load against Proxmox. Reuse a recent probe instead.
@@ -99,7 +104,7 @@ async function refreshLoop(): Promise<never> {
     }
 
     const last_updated = new Date().toISOString();
-    cache = { containers, last_updated };
+    setCache({ containers, last_updated });
 
     pushToSubscribers(serializeSnapshot(containers, last_updated));
 
@@ -116,5 +121,17 @@ onReload(() => {
   requestImmediateRefresh();
 });
 
-// Start the background refresh loop when this module is first imported
-refreshLoop().catch((e) => console.error("Cache refresh loop crashed:", e));
+let started = false;
+
+/**
+ * Start the background refresh loop. Called once from src/index.ts.
+ *
+ * Deliberately not a module-level side effect: importing this module — directly or
+ * transitively, as the router does — would otherwise immediately start polling
+ * Proxmox, which makes anything downstream untestable.
+ */
+export function startRefreshLoop(): void {
+  if (started) return;
+  started = true;
+  refreshLoop().catch((e) => console.error("Cache refresh loop crashed:", e));
+}
