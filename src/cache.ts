@@ -35,11 +35,17 @@ let triggerRefresh: (() => void) | null = null;
 
 function waitOrTrigger(seconds: number): Promise<void> {
   return new Promise<void>((resolve) => {
-    triggerRefresh = resolve;
-    setTimeout(() => {
+    // Both paths go through finish(), which cancels the timer. Without that, a
+    // triggered wait left its timeout pending; when it eventually fired it set
+    // triggerRefresh back to null — silently disarming the *next* iteration's
+    // trigger, so the reload after a triggered one wouldn't refresh immediately.
+    const finish = () => {
+      clearTimeout(timer);
       triggerRefresh = null;
       resolve();
-    }, seconds * 1000);
+    };
+    const timer = setTimeout(finish, seconds * 1000);
+    triggerRefresh = finish;
   });
 }
 
