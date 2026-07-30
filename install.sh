@@ -122,7 +122,10 @@ else
     ask         "Proxmox host and port (e.g. 192.168.0.1:8006)" PROXMOX_HOST
     ask         "API user (e.g. dashboard@pam!token)"            PROXMOX_USER
     ask         "API token secret"                                PROXMOX_TOKEN
-    ask_default "Dashboard port"                                  DASHBOARD_PORT "8000"
+    # Defaults to 80 so the dashboard is reachable without a port in the URL.
+    # This runs as root in a dedicated LXC, so binding a privileged port is fine —
+    # unlike local development, where config.toml.example stays on 8000.
+    ask_default "Dashboard port"                                  DASHBOARD_PORT "80"
     ask_default "Dashboard title"                                 DASHBOARD_TITLE "Proxmox Container Dashboard"
     ask_default "Cache refresh interval (seconds)"               REFRESH_SECS "30"
 
