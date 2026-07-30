@@ -50,10 +50,21 @@ export function getServiceInfo(
   return bestMatch === null ? null : serviceMap[bestMatch];
 }
 
-/** True if `current` (e.g. "1.3.14") is >= `min`, comparing major.minor.patch numerically. */
+/**
+ * True if `current` (e.g. "1.3.14") is >= `min`, comparing major.minor.patch numerically.
+ *
+ * Prerelease and build suffixes are ignored: `Number("14-canary.1")` is NaN, which made
+ * every comparison false and had the startup gate reject perfectly good newer Bun builds.
+ * "1.4.0-canary.1" is therefore treated as "1.4.0" — precise enough for a minimum check.
+ */
 export function satisfiesMinVersion(current: string, min: string): boolean {
-  const currentParts = current.split(".").map(Number);
-  const minParts = min.split(".").map(Number);
+  const parse = (version: string) =>
+    version.split(".").map((part) => {
+      const n = Number.parseInt(part, 10);
+      return Number.isNaN(n) ? 0 : n;
+    });
+  const currentParts = parse(current);
+  const minParts = parse(min);
   for (let i = 0; i < Math.max(currentParts.length, minParts.length); i++) {
     const c = currentParts[i] ?? 0;
     const m = minParts[i] ?? 0;
