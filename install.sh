@@ -21,8 +21,12 @@ heading() { echo -e "\n\e[1;34m==> $*\e[0m"; }
 ask()     { read -rp "    $1: " "$2"; }
 ask_default() {
     # ask_default "Prompt" VAR_NAME "default value"
+    # NOTE: use an explicit `if` rather than `[[ ... ]] && ...` — the latter returns
+    # non-zero when the user supplies a value, which aborts the script under `set -e`.
     read -rp "    $1 [${3}]: " "$2"
-    [[ -z "${!2}" ]] && printf -v "$2" '%s' "$3"
+    if [[ -z "${!2}" ]]; then
+        printf -v "$2" '%s' "$3"
+    fi
 }
 ask_yn() {
     # ask_yn "Prompt [y/N]" VAR_NAME
