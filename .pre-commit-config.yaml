@@ -6,6 +6,29 @@ repos:
         args: [--fix=lf]
         stages: [pre-commit]
 
+      # Catch malformed config before it reaches a running service or a workflow run.
+      - id: check-yaml
+        stages: [pre-commit]
+      - id: check-toml
+        stages: [pre-commit]
+      - id: check-json
+        stages: [pre-commit]
+
+      # config.toml holds a Proxmox API token and is git-ignored; this is the
+      # backstop for anything credential-shaped that gets force-added anyway.
+      - id: detect-private-key
+        stages: [pre-commit]
+
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        # Two trailing spaces are a hard line break in Markdown — .editorconfig
+        # already exempts *.md from trimming, so keep the hook consistent with it.
+        args: [--markdown-linebreak-ext=md]
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        stages: [pre-commit]
+
   - repo: local
     hooks:
       - id: biome
