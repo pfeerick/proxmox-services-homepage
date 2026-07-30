@@ -203,10 +203,11 @@ cz bump --changelog --retry
 
 # Preview what would happen (dry run)
 cz bump --dry-run
-
-# Push changes with tags
-git push --follow-tags
 ```
+
+The bump pushes itself — a post-bump hook runs `git push --atomic --follow-tags origin HEAD`, so the bump commit and its tag always reach the remote together. No manual push step is needed.
+
+> **Why the push is automatic:** a tag that exists only locally is indistinguishable from one that was deleted upstream, so any `git fetch` will prune it if `fetch.pruneTags` is enabled — silently leaving a bump commit with no release tag. Pushing as part of the bump closes that window. Relatedly, tags are configured as **annotated** (`annotated_tag = true`), because `git push --follow-tags` skips lightweight tags without reporting anything.
 
 During `cz bump`, Commitizen is configured to run pre-bump hooks that:
 - run `bun install` to ensure `bun.lock` is up to date

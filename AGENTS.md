@@ -43,8 +43,9 @@ Repository guidance for coding agents working in this repo.
 - Follow Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `ci:`, `perf:`.
 - Use `cz commit` for guided commit message creation, or write manually — the commit-msg hook validates format.
 - Use `cz bump --changelog --retry` for version bumps. This updates `.cz.toml` and `package.json`, generates `CHANGELOG.md`, runs pre-bump hooks (`bun install`, `git add bun.lock`), and creates the tag.
-- After bumping, push with `git push --follow-tags` to ensure the release tag reaches the remote.
-- If a bump commit lands without its tag, create the tag manually before running `cz bump` again.
+- A post-bump hook pushes the commit and tag together (`git push --atomic --follow-tags origin HEAD`) — do not add a separate push step.
+- Never leave a release tag unpushed. A local-only tag looks identical to one deleted upstream, so any `git fetch` prunes it when `fetch.pruneTags` is set — this has already cost one release tag. Tags are annotated (`annotated_tag = true`) because `--follow-tags` silently ignores lightweight tags.
+- If a bump commit ever lands without its tag, create the tag on the bump commit and push it before running `cz bump` again.
 
 ## Code Style
 

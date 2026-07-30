@@ -11,3 +11,12 @@ pre_bump_hooks = [
     "bun install",
     "git add bun.lock",
 ]
+# Annotated, not lightweight: `git push --follow-tags` silently skips lightweight
+# tags, so a bump commit would reach the remote while its tag stayed local.
+annotated_tag = true
+# Push the bump commit and its tag together, atomically, as part of the bump.
+# A tag that only exists locally is indistinguishable from one deleted upstream,
+# so the next `git fetch` prunes it (fetch.pruneTags) — losing the release tag.
+post_bump_hooks = [
+    "git push --atomic --follow-tags origin HEAD",
+]
