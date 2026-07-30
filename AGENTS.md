@@ -20,7 +20,10 @@ Repository guidance for coding agents working in this repo.
 - Run the full suite with `bun test` before committing.
 - Prefer targeted runs (`bun test tests/ip-parsing.test.ts`) for the specific area changed.
 - Config loading tests use temp directories via `mkdtempSync` — never touch `config.toml` or `services.toml` directly in tests.
-- The server (`src/index.ts`) starts the background cache refresh loop when imported. Keep test files isolated to pure functions from `src/utils.ts`, `src/config.ts`, and `src/proxmox.ts` where possible.
+- Routes are tested through `handleRequest()` from `src/router.ts`, not by binding a port. Seed a snapshot with `setCache()` from `src/cache.ts` first.
+- Frontend tests import the modules under `static/js/` directly. `tests/frontend-change-detection.test.ts` needs a DOM (the change detectors cache their state inside the render functions, so priming means rendering) and registers happy-dom.
+- **happy-dom's `GlobalRegistrator.register()` replaces process-wide globals, including `Response` and `Blob`.** Bun runs all test files in one process, so always `unregister()` in `afterAll` — otherwise later files break in confusing ways (the route tests read a response body and got `"[object Blob]"`).
+- `/health` caches its upstream probe for 5s and the cache isn't resettable from outside, so a test asserting on probe counts must be the first `/health` call in the process.
 
 ## Architecture
 
@@ -29,7 +32,8 @@ Repository guidance for coding agents working in this repo.
 - `config` and `serviceMap` are live ESM bindings exported from `src/config.ts`. They are reassigned atomically by `reloadConfigs()`. Use `readConfig(dir)` and `readServices(dir)` with a temp directory when testing config loading in isolation.
 - `readConfig()` merges the parsed TOML over `defaultConfig()`, so missing sections and keys resolve to defaults rather than `undefined`. New config keys must be given a default there.
 - `reloadConfigs()` guards both the parse and the `onReload` callback, rolling back to the previous config if either throws — it runs inside the watcher's interval callback, where an escaping exception would take the process down.
-- The container cache (`src/cache.ts`) is populated by a `while (true)` loop awaiting `waitOrTrigger()`, which resolves either on a `setTimeout` or early via `requestImmediateRefresh()` (used by the config reload hook). Route tests should test `computeServices()` and the data shapes directly rather than mocking the Proxmox API.
+- The container cache (`src/cache.ts`) is populated by a `while (true)` loop awaiting `waitOrTrigger()`, which resolves either on a `setTimeout` or early via `requestImmediateRefresh()` (used by the config reload hook). The loop is **not** started on import — `src/index.ts` calls `startRefreshLoop()` — so importing the router doesn't begin polling Proxmox. Don't move it back to module scope.
+- `src/router.ts` holds the whole HTTP surface as `handleRequest(req, ctx)`, deliberately separate from `Bun.serve` in `src/index.ts` so routes are callable without a port. `ctx.clearTimeout` is how the SSE route escapes Bun's idle timeout; it's optional so tests can omit or observe it.
 - `src/sse.ts` holds module-level subscriber state plus an unref'd keep-alive interval, and exports `serializeSnapshot()` — the single place the `containers`/`services` event pair is built, shared by the `/api/stream` initial payload and the cache push. It's safe to import from tests.
 - `getServiceInfo()`, `computeServices()`, `escapeHtml()` and `satisfiesMinVersion()` are pure functions in `src/utils.ts` — test them directly.
 - `checkConnection()` in `ProxmoxAPI` probes `/api2/json/nodes`. Assign a stub to `globalThis.fetch` (see `tests/proxmox-containers.test.ts`) or use `mock.module` when testing it. `checkHealth()` in `src/cache.ts` wraps it with a 5s result cache, so back-to-back `/health` requests don't each hit Proxmox.
