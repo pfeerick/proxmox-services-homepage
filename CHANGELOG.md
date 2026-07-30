@@ -1,3 +1,9 @@
+## v0.5.0 (2026-07-30)
+
+### Refactor
+
+- rewrite backend in Bun/TypeScript (#1)
+
 ## v0.4.0 (2026-04-05)
 
 ### Feat
