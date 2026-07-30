@@ -12,8 +12,21 @@
     "indentWidth": 2,
     "lineWidth": 100
   },
+  "html": {
+    "parser": {
+      "interpolation": true
+    }
+  },
   "files": {
-    "includes": ["src/**", "tests/**", "biome.json", "tsconfig.json", "package.json"],
+    "includes": [
+      "src/**",
+      "tests/**",
+      "static/**",
+      "!static/js/bundle.js",
+      "biome.json",
+      "tsconfig.json",
+      "package.json"
+    ],
     "ignoreUnknown": true
   }
 }
