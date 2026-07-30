@@ -23,7 +23,8 @@ A dynamic web dashboard for Proxmox VE that displays all running LXC containers 
 
 ## Requirements
 
-- [Bun](https://bun.sh/) v1.0+
+- [Bun](https://bun.sh/) — the required version is pinned in `.mise.toml` (currently 1.3.14).
+  The server checks this on startup and refuses to run on anything older.
 - A Proxmox VE instance with API access
 - A Proxmox API token with at least `PVEAuditor` role on `/`
 
@@ -37,15 +38,15 @@ Create a dedicated user and API token in Proxmox:
 # Create user
 pveum user add dashboard@pam --comment "Dashboard service"
 
-# Create role with audit permissions
-pveum role add DashboardAuditor --privs "VM.Audit Sys.Audit Datastore.Audit"
-
-# Assign role
+# Assign the built-in audit role at the root path
 pveum acl modify / --users dashboard@pam --roles PVEAuditor
 
 # Create API token (save the token secret shown - it won't be shown again)
 pveum user token add dashboard@pam dashboard --privsep 0
 ```
+
+`PVEAuditor` is read-only, which is all the dashboard needs — it only lists nodes,
+containers and their network configuration.
 
 Or reuse an existing token that has `PVEAuditor` on `/`.
 
@@ -78,9 +79,36 @@ auto_refresh_seconds = 30
 title = "Proxmox Container Dashboard"
 ```
 
+Any section or key you leave out falls back to the built-in default, so a partial
+`config.toml` is fine — the server logs what it filled in rather than failing to start.
+
+### Environment variables
+
+If `config.toml` is **absent entirely**, the Proxmox connection is read from the
+environment instead:
+
+| Variable | Default |
+|---|---|
+| `PROXMOX_HOST` | `your-proxmox-ip:8006` |
+| `PROXMOX_USER` | `api@pam!dashboard` |
+| `PROXMOX_TOKEN` | `your-api-token-here` |
+
+This is a convenience for container-style deployments. These variables are **ignored
+once `config.toml` exists** — the file always wins.
+
 ### services.toml
 
 Maps LXC container names to their service information. Containers not listed here will still appear in the detailed view but won't have a service link. Containers without a `port` are skipped in the service view.
+
+Container names are matched against these keys in two passes:
+
+1. **Exact match** — a container named `jellyfin` uses `[services.jellyfin]`.
+2. **Longest prefix** — otherwise the longest key that the container name starts with
+   wins. `unifi-os-server-2` matches `[services.unifi-os-server]` rather than
+   `[services.unifi]`, regardless of which is declared first.
+
+That means suffixed containers (`jellyfin-001`, `navidrome-music`) pick up their
+service definition automatically.
 
 ```toml
 [services.jellyfin]
@@ -123,6 +151,12 @@ bun run dev
 
 Access at `http://localhost:8000` (or whichever port you configured).
 
+The frontend is served as ES modules straight from `static/js/` during development.
+For production, `bun run build` bundles and minifies them into `static/js/bundle.js`;
+the server serves that automatically when it exists and falls back to the unbundled
+`app.js` when it doesn't. `install.sh` runs the build for you, so this only matters
+if you're deploying by hand.
+
 ---
 
 ### Option 2 — Proxmox LXC (LAN access)
@@ -148,15 +182,20 @@ bash <(curl -fsSL https://raw.githubusercontent.com/pfeerick/proxmox-services-ho
 ```
 
 The installer will:
-- Install `git`, `curl`, and `bun`
+- Install `git`, `curl`, `unzip`, and `bun` (pinned to the version in `.mise.toml`)
 - Clone the repo to `/opt/dashboard`
 - Prompt for your Proxmox host, API credentials, port, and title
-- Write `config.toml` and create/enable the systemd service
+- Build the frontend bundle
+- Write `config.toml` (mode 600) and create/enable the systemd service
 - Optionally set up a daily auto-update timer
 
-Access at `http://<lxc-ip>` (port 80) or `http://<lxc-ip>:8000` depending on the port you chose.
+Access at `http://<lxc-ip>:8000`, or on whichever port you entered at the prompt.
+To serve on port 80 so no port is needed in the URL, enter `80` when asked for the
+dashboard port.
 
-> **Updating** — re-run the installer at any time; it detects an existing install and pulls the latest changes instead of cloning.
+> **Updating** — re-run the installer at any time; it detects an existing install,
+> pulls the latest changes, rebuilds, and restarts the service. Your `config.toml`
+> is left untouched.
 
 ---
 
@@ -225,7 +264,7 @@ No port needed if running on port 80. Accessible from any device on your tailnet
 | `GET /api/stream` | SSE stream — pushes `containers` and `services` events on each cache refresh |
 | `GET /api/services` | JSON list of running services with URLs |
 | `GET /api/containers` | JSON list of all containers with full details |
-| `GET /health` | Health check — returns 503 if Proxmox is unreachable |
+| `GET /health` | Health check — returns 503 if Proxmox is unreachable. The upstream probe is cached for 5s, so polling it hard won't relay that load onto Proxmox |
 
 ---
 
