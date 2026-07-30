@@ -67,40 +67,49 @@ export class ProxmoxAPI {
    */
   async getContainers(serviceMap: ServiceMap): Promise<Container[]> {
     const nodesRes = await this.get<{ data: Array<{ node: string }> }>("/nodes");
-    const containers: Container[] = [];
 
-    for (const { node } of nodesRes.data) {
-      const lxcRes = await this.get<{ data: LxcEntry[] }>(`/nodes/${node}/lxc`);
+    // Nodes, and the containers within each node, are fetched concurrently. Each
+    // container costs two or three round trips, so walking them sequentially made
+    // the poll duration scale with the size of the cluster.
+    const perNode = await Promise.all(
+      nodesRes.data.map(async ({ node }) => {
+        const lxcRes = await this.get<{ data: LxcEntry[] }>(`/nodes/${node}/lxc`);
+        return Promise.all(lxcRes.data.map((ct) => this.toContainer(node, ct, serviceMap)));
+      }),
+    );
 
-      for (const ct of lxcRes.data) {
-        let ip: string | null = null;
+    return perNode.flat();
+  }
 
-        const configRes = await this.get<{ data: Record<string, unknown> }>(
-          `/nodes/${node}/lxc/${ct.vmid}/config`,
-        ).catch(() => null);
+  private async toContainer(
+    node: string,
+    ct: LxcEntry,
+    serviceMap: ServiceMap,
+  ): Promise<Container> {
+    let ip: string | null = null;
 
-        if (configRes) ip = extractIpFromConfig(configRes.data);
+    const configRes = await this.get<{ data: Record<string, unknown> }>(
+      `/nodes/${node}/lxc/${ct.vmid}/config`,
+    ).catch(() => null);
 
-        if (!ip && ct.status === "running") {
-          ip = await this.getActualIp(node, ct.vmid);
-        }
+    if (configRes) ip = extractIpFromConfig(configRes.data);
 
-        const name = ct.name ?? `CT-${ct.vmid}`;
-        containers.push({
-          vmid: ct.vmid,
-          name,
-          status: ct.status as Container["status"],
-          node,
-          ip: ip ?? "DHCP/Unknown",
-          uptime: ct.uptime ?? 0,
-          memory_usage: ct.mem ?? 0,
-          memory_max: ct.maxmem ?? 0,
-          service: getServiceInfo(name, serviceMap),
-        });
-      }
+    if (!ip && ct.status === "running") {
+      ip = await this.getActualIp(node, ct.vmid);
     }
 
-    return containers;
+    const name = ct.name ?? `CT-${ct.vmid}`;
+    return {
+      vmid: ct.vmid,
+      name,
+      status: ct.status as Container["status"],
+      node,
+      ip: ip ?? "DHCP/Unknown",
+      uptime: ct.uptime ?? 0,
+      memory_usage: ct.mem ?? 0,
+      memory_max: ct.maxmem ?? 0,
+      service: getServiceInfo(name, serviceMap),
+    };
   }
 
   private async getActualIp(node: string, vmid: number): Promise<string | null> {
