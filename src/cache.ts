@@ -53,7 +53,18 @@ async function refreshLoop(): Promise<never> {
     const currentProxy = proxmox;
     const currentServiceMap = serviceMap;
 
-    const containers = await currentProxy.getContainers(currentServiceMap);
+    // A failed poll must not clobber a good snapshot — a transient Proxmox outage
+    // would otherwise empty the dashboard until the next successful refresh.
+    // An empty-but-successful result is still a real answer, so it does update.
+    let containers: Container[];
+    try {
+      containers = await currentProxy.getContainers(currentServiceMap);
+    } catch (e) {
+      console.error("Error connecting to Proxmox — keeping last known containers:", e);
+      await waitOrTrigger(interval);
+      continue;
+    }
+
     const last_updated = new Date().toISOString();
     cache = { containers, last_updated };
 
