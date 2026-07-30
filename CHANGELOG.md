@@ -1,3 +1,30 @@
+## v0.6.0 (2026-07-30)
+
+### Feat
+
+- **install**: default the LXC deployment to port 80
+
+### Fix
+
+- **frontend**: resolve lint findings in the static assets
+- **version**: tolerate prerelease Bun version strings
+- **server**: escape the dashboard title before injecting it into HTML
+- **services**: prefer the longest matching service prefix
+- **config**: merge config.toml over defaults and contain reload errors
+- **cache**: stop a stale timer clobbering the refresh trigger
+- **cache**: keep the last good snapshot when Proxmox is unreachable
+- **install**: restart the service when updating an existing install
+- **install**: don't abort under set -e when a non-default value is entered
+
+### Refactor
+
+- **sse**: share snapshot serialization between routes and cache
+
+### Perf
+
+- **health**: reuse a briefly cached connection probe
+- **proxmox**: fetch nodes and containers in parallel
+
 ## v0.5.0 (2026-07-30)
 
 ### Refactor
