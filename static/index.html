@@ -6,13 +6,15 @@
         <title>{{TITLE}}</title>
         <script>
             // Applied before first paint to avoid a flash of the wrong theme.
-            (function () {
+            (() => {
                 try {
-                    var override = localStorage.getItem("theme");
+                    const override = localStorage.getItem("theme");
                     if (override === "light" || override === "dark") {
                         document.documentElement.setAttribute("data-theme", override);
                     }
-                } catch (e) {}
+                } catch {
+                    // localStorage unavailable (e.g. private browsing) — use the OS theme
+                }
             })();
         </script>
         <link rel="stylesheet" href="/static/css/dashboard.css">
@@ -36,7 +38,7 @@
             <div id="services-error" class="error-state" style="display: none;">
                 <h2>❌ Failed to Load Services</h2>
                 <p>Could not connect to Proxmox or fetch container information.</p>
-                <button class="retry-btn" id="services-retry">🔄 Retry</button>
+                <button type="button" class="retry-btn" id="services-retry">🔄 Retry</button>
             </div>
             <div id="services-content" style="display: none;">
                 <div id="service-count" class="service-count"></div>
@@ -57,7 +59,7 @@
             <div id="containers-error" class="error-state" style="display: none;">
                 <h2>❌ Failed to Load Container Data</h2>
                 <p>Could not connect to Proxmox API or fetch container information.</p>
-                <button class="retry-btn" id="containers-retry">🔄 Retry</button>
+                <button type="button" class="retry-btn" id="containers-retry">🔄 Retry</button>
             </div>
             <div id="containers-content" style="display: none;">
                 <div class="stats">
