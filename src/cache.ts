@@ -25,8 +25,36 @@ export function getCache(): CacheSnapshot {
   return cache;
 }
 
+// /health is unauthenticated, and each call previously hit the Proxmox API — so
+// anything hammering the endpoint (an over-eager uptime monitor, or a hostile
+// client) turned into the same load against Proxmox. Reuse a recent probe instead.
+const HEALTH_PROBE_TTL_MS = 5_000;
+
+interface HealthProbe {
+  result: { ok: boolean; error?: string };
+  at: number;
+}
+
+let lastProbe: HealthProbe | null = null;
+let inFlightProbe: Promise<{ ok: boolean; error?: string }> | null = null;
+
 export async function checkHealth(): Promise<{ ok: boolean; error?: string }> {
-  return proxmox.checkConnection();
+  if (lastProbe && Date.now() - lastProbe.at < HEALTH_PROBE_TTL_MS) return lastProbe.result;
+
+  // Concurrent callers share one probe rather than each opening their own.
+  if (!inFlightProbe) {
+    const probe = proxmox.checkConnection();
+    inFlightProbe = probe;
+    probe
+      .then((result) => {
+        lastProbe = { result, at: Date.now() };
+      })
+      .finally(() => {
+        if (inFlightProbe === probe) inFlightProbe = null;
+      });
+  }
+
+  return inFlightProbe;
 }
 
 // Resolving this skips the current wait interval and triggers an immediate refresh
@@ -82,6 +110,9 @@ async function refreshLoop(): Promise<never> {
 // Rebuild ProxmoxAPI instance and force a refresh whenever config is reloaded
 onReload(() => {
   proxmox = buildProxmox();
+  // The probe describes the old client's connection — discard it so /health
+  // reflects the new credentials straight away.
+  lastProbe = null;
   requestImmediateRefresh();
 });
 
