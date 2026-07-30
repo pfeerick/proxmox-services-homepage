@@ -57,47 +57,50 @@ export class ProxmoxAPI {
     }
   }
 
+  /**
+   * Fetch every LXC container across all nodes.
+   *
+   * Throws if the node list or a node's container list can't be retrieved, so the
+   * caller can tell "Proxmox is unreachable" apart from "there are no containers"
+   * and avoid replacing a good cache with an empty one. Per-container detail lookups
+   * stay best-effort — one unreadable container shouldn't fail the whole poll.
+   */
   async getContainers(serviceMap: ServiceMap): Promise<Container[]> {
-    try {
-      const nodesRes = await this.get<{ data: Array<{ node: string }> }>("/nodes");
-      const containers: Container[] = [];
+    const nodesRes = await this.get<{ data: Array<{ node: string }> }>("/nodes");
+    const containers: Container[] = [];
 
-      for (const { node } of nodesRes.data) {
-        const lxcRes = await this.get<{ data: LxcEntry[] }>(`/nodes/${node}/lxc`);
+    for (const { node } of nodesRes.data) {
+      const lxcRes = await this.get<{ data: LxcEntry[] }>(`/nodes/${node}/lxc`);
 
-        for (const ct of lxcRes.data) {
-          let ip: string | null = null;
+      for (const ct of lxcRes.data) {
+        let ip: string | null = null;
 
-          const configRes = await this.get<{ data: Record<string, unknown> }>(
-            `/nodes/${node}/lxc/${ct.vmid}/config`,
-          ).catch(() => null);
+        const configRes = await this.get<{ data: Record<string, unknown> }>(
+          `/nodes/${node}/lxc/${ct.vmid}/config`,
+        ).catch(() => null);
 
-          if (configRes) ip = extractIpFromConfig(configRes.data);
+        if (configRes) ip = extractIpFromConfig(configRes.data);
 
-          if (!ip && ct.status === "running") {
-            ip = await this.getActualIp(node, ct.vmid);
-          }
-
-          const name = ct.name ?? `CT-${ct.vmid}`;
-          containers.push({
-            vmid: ct.vmid,
-            name,
-            status: ct.status as Container["status"],
-            node,
-            ip: ip ?? "DHCP/Unknown",
-            uptime: ct.uptime ?? 0,
-            memory_usage: ct.mem ?? 0,
-            memory_max: ct.maxmem ?? 0,
-            service: getServiceInfo(name, serviceMap),
-          });
+        if (!ip && ct.status === "running") {
+          ip = await this.getActualIp(node, ct.vmid);
         }
-      }
 
-      return containers;
-    } catch (e) {
-      console.error("Error connecting to Proxmox:", e);
-      return [];
+        const name = ct.name ?? `CT-${ct.vmid}`;
+        containers.push({
+          vmid: ct.vmid,
+          name,
+          status: ct.status as Container["status"],
+          node,
+          ip: ip ?? "DHCP/Unknown",
+          uptime: ct.uptime ?? 0,
+          memory_usage: ct.mem ?? 0,
+          memory_max: ct.maxmem ?? 0,
+          service: getServiceInfo(name, serviceMap),
+        });
+      }
     }
+
+    return containers;
   }
 
   private async getActualIp(node: string, vmid: number): Promise<string | null> {
