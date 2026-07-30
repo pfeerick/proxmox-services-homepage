@@ -17,6 +17,31 @@ function defaultConfig(): AppConfig {
   };
 }
 
+type PartialConfig = {
+  [K in keyof AppConfig]?: Partial<AppConfig[K]>;
+};
+
+/**
+ * Merges a parsed config.toml over the defaults, section by section.
+ *
+ * A hand-edited config.toml is easy to get wrong — a missing [server] or
+ * [dashboard] table used to leave the section `undefined`, and the first
+ * property read (e.g. `config.server.host`) threw. Filling the gaps from the
+ * defaults keeps the server up on a partial config and reports what was missing.
+ */
+function mergeConfig(parsed: PartialConfig): AppConfig {
+  const defaults = defaultConfig();
+  const missing = (Object.keys(defaults) as Array<keyof AppConfig>).filter((key) => !parsed[key]);
+  if (missing.length > 0) {
+    console.warn(`⚠️  config.toml is missing [${missing.join("], [")}] — using defaults`);
+  }
+  return {
+    proxmox: { ...defaults.proxmox, ...parsed.proxmox },
+    server: { ...defaults.server, ...parsed.server },
+    dashboard: { ...defaults.dashboard, ...parsed.dashboard },
+  };
+}
+
 export function readConfig(dir: string = APP_DIR): AppConfig {
   const path = join(dir, "config.toml");
   if (!existsSync(path)) {
@@ -24,7 +49,7 @@ export function readConfig(dir: string = APP_DIR): AppConfig {
     return defaultConfig();
   }
   const text = readFileSync(path, "utf-8");
-  return Bun.TOML.parse(text) as unknown as AppConfig;
+  return mergeConfig(Bun.TOML.parse(text) as PartialConfig);
 }
 
 export function readServices(dir: string = APP_DIR): ServiceMap {
@@ -60,15 +85,37 @@ export function onReload(cb: () => void): void {
 }
 
 export function reloadConfigs(): void {
+  const previousConfig = config;
+  const previousServiceMap = serviceMap;
+
   try {
     console.log("🔄 Reloading configuration files...");
     config = readConfig();
     serviceMap = readServices();
     console.log(`✅ Loaded ${Object.keys(serviceMap).length} service definitions`);
   } catch (e) {
-    console.error("❌ Error reloading configs:", e);
+    console.error("❌ Error reloading configs — keeping the previous configuration:", e);
+    config = previousConfig;
+    serviceMap = previousServiceMap;
+    return;
   }
-  reloadCallback?.();
+
+  // The callback runs outside the block above but still needs guarding: it rebuilds
+  // the Proxmox client, which reads the ssl_verify CA file from disk. An unhandled
+  // throw here would escape into the watcher's interval callback and take the
+  // process down, so a bad reload rolls back instead.
+  try {
+    reloadCallback?.();
+  } catch (e) {
+    console.error("❌ Error applying reloaded config — rolling back:", e);
+    config = previousConfig;
+    serviceMap = previousServiceMap;
+    try {
+      reloadCallback?.();
+    } catch (rollbackError) {
+      console.error("❌ Rollback failed:", rollbackError);
+    }
+  }
 }
 
 const WATCH_POLL_INTERVAL_MS = 1000;

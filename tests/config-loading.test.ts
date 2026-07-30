@@ -58,6 +58,47 @@ title = "My Dashboard"
     expect(result.server.port).toBe(8080);
     expect(result.dashboard.title).toBe("My Dashboard");
   });
+
+  it("fills in defaults for missing sections instead of throwing", () => {
+    const dir = makeTmpDir();
+    writeFileSync(
+      join(dir, "config.toml"),
+      `
+[proxmox]
+host = "pve:8006"
+user = "user@pam!tok"
+token = "abc123"
+`,
+    );
+    const result = readConfig(dir);
+    expect(result.proxmox.host).toBe("pve:8006");
+    // [server] and [dashboard] are absent — these would previously be undefined,
+    // and the first property read on them threw at startup.
+    expect(result.server.host).toBe("0.0.0.0");
+    expect(result.server.port).toBe(8000);
+    expect(result.dashboard.auto_refresh_seconds).toBe(30);
+    expect(result.dashboard.title).toBe("Proxmox Container Dashboard");
+  });
+
+  it("fills in defaults for individual missing keys within a section", () => {
+    const dir = makeTmpDir();
+    writeFileSync(
+      join(dir, "config.toml"),
+      `
+[server]
+port = 9000
+
+[dashboard]
+title = "Partial"
+`,
+    );
+    const result = readConfig(dir);
+    expect(result.server.port).toBe(9000);
+    expect(result.server.host).toBe("0.0.0.0");
+    expect(result.dashboard.title).toBe("Partial");
+    expect(result.dashboard.auto_refresh_seconds).toBe(30);
+    expect(result.proxmox.ssl_verify).toBe(false);
+  });
 });
 
 describe("readServices", () => {
