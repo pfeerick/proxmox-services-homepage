@@ -2,6 +2,7 @@
     "recommendations": [
         "biomejs.biome",
         "oven.bun-vscode",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "hverlin.mise-vscode"
     ]
 }

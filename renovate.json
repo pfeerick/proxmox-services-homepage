@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":enablePreCommit",
+    "schedule:weekly"
+  ],
+  "packageRules": [
+    {
+      "description": "Bun is enforced at startup by src/index.ts and installed by install.sh — keep it its own deliberate PR",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["bun"],
+      "groupName": null
+    },
+    {
+      "description": "@types/bun tracks the pinned Bun version, so bump it alongside Bun",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@types/bun"],
+      "groupName": null
+    },
+    {
+      "matchManagers": ["github-actions", "pre-commit"],
+      "groupName": "CI tooling"
+    }
+  ]
+}

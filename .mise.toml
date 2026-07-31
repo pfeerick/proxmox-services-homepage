@@ -1,2 +1,12 @@
+# install.sh greps `^bun[[:space:]]*=`, so keep that key unquoted at column 0.
 [tools]
 bun = "1.3.14"
+"pipx:commitizen" = "4.17.0"
+"pipx:pre-commit" = "4.6.1"
+
+[tasks.setup]
+description = "Install dependencies and git hooks"
+run = [
+  "bun install",
+  "pre-commit install --hook-type pre-commit --hook-type commit-msg",
+]

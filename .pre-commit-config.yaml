@@ -44,8 +44,14 @@ repos:
       - id: shellcheck
         stages: [pre-commit]
 
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.13.9
+  # Local, not upstream: otherwise pre-commit builds its own commitizen at a rev
+  # that drifts from the pipx:commitizen in .mise.toml that runs `cz bump`.
+  # Resolving `cz` from PATH needs mise's shims dir — see CONTRIBUTING.md.
+  - repo: local
     hooks:
       - id: commitizen
+        name: commitizen check
+        entry: cz check
+        args: [--allow-abort, --commit-msg-file]
+        language: system
         stages: [commit-msg]

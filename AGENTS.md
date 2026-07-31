@@ -4,15 +4,18 @@ Repository guidance for coding agents working in this repo.
 
 ## Tooling
 
-- Use `bun install` to install/update the development environment.
+- `mise install && mise run setup` provisions everything: Bun, commitizen and pre-commit at
+  their pinned versions, plus `bun install` and the git hooks.
+- Use `bun install` to install/update dependencies alone.
 - Use `bun run dev` to start the server with hot-reload during development.
 - Use `bun test` to run the test suite.
 - Use `bun run build` to bundle `static/js/app.js` into `static/js/bundle.js`. The server
   serves the bundle when it exists and the unbundled modules when it doesn't, so a stale
   `bundle.js` will silently mask frontend edits during development — delete it or rebuild.
-- The Bun version is pinned in `.mise.toml` and enforced at startup by `src/index.ts`. It is
-  the single source of truth: `install.sh` and the CI workflow both read the version out of
-  it rather than hardcoding one.
+- `.mise.toml` pins every dev tool version (Bun, commitizen, pre-commit). Bun additionally is
+  enforced at startup by `src/index.ts` and read by `install.sh`, which greps
+  `^bun[[:space:]]*=` — keep that key unquoted at column 0. CI installs from the file directly
+  via `jdx/mise-action`.
 - Respect the Commitizen workflow configured in `.cz.toml`.
 
 ## Tests
@@ -46,13 +49,15 @@ Repository guidance for coding agents working in this repo.
 - A post-bump hook pushes the commit and tag together (`git push --atomic --follow-tags origin HEAD`) — do not add a separate push step.
 - Never leave a release tag unpushed. A local-only tag looks identical to one deleted upstream, so any `git fetch` prunes it when `fetch.pruneTags` is set — this has already cost one release tag. Tags are annotated (`annotated_tag = true`) because `--follow-tags` silently ignores lightweight tags.
 - If a bump commit ever lands without its tag, create the tag on the bump commit and push it before running `cz bump` again.
+- Commits an agent authored end with `Co-Authored-By: <Model Name> <noreply@anthropic.com>` as the last line. It must be preceded by a blank line — without one the commit-msg hook reads it as part of the subject and rejects the message. The trailer never reaches `CHANGELOG.md`, which is built from subject lines only.
 
 ## Code Style
 
 - Biome is configured in `biome.json` (line length 100, 2-space indent) and covers `src/**`, `tests/**` and `static/**` — the generated `static/js/bundle.js` is excluded. Run `bun run check:fix` before committing, or rely on the pre-commit hooks to do it automatically.
 - `biome.json` is strict JSON, **not** JSONC. A `//` comment doesn't error loudly — Biome discards the whole config and silently falls back to its defaults (tab indent), which shows up as every file suddenly needing a reformat.
 - `static/index.html` contains `{{TITLE}}` / `{{SCRIPT}}` placeholders substituted by `src/index.ts` at request time; `html.parser.interpolation` is enabled so Biome accepts them.
-- Pre-commit hooks run Biome (pre-commit stage), shellcheck, and commitizen (commit-msg stage). Install with `pre-commit install --hook-type pre-commit --hook-type commit-msg`.
+- Pre-commit hooks run Biome (pre-commit stage), shellcheck, and commitizen (commit-msg stage). Install with `mise run setup`.
+- The Biome and commitizen hooks are `repo: local` / `language: system`, so they resolve `bun` and `cz` from PATH rather than a pre-commit-managed venv. Committing from an editor UI therefore needs mise's shims directory on the persistent PATH — see CONTRIBUTING.md.
 - `install.sh` runs under `set -euo pipefail`. A helper whose last command is a `[[ ... ]] && ...` short-circuit returns non-zero on the false branch and aborts the script — use an explicit `if`.
 
 ## Changes
