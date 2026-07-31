@@ -22,31 +22,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # .mise.toml is the single source of truth for the Bun version, and src/index.ts
-  # refuses to start below it. setup-bun's bun-version-file only understands
-  # package.json / .tool-versions / .bumrc / .bun-version, so read it out here and
-  # feed the result to every job as an explicit bun-version.
-  bun-version:
-    name: Resolve pinned Bun version
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.read.outputs.version }}
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Read pinned version from .mise.toml
-        id: read
-        run: |
-          version=$(grep -E '^bun[[:space:]]*=' .mise.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          if [[ -z "$version" ]]; then
-            echo "::error file=.mise.toml::No pinned bun version found"
-            exit 1
-          fi
-          echo "Pinned Bun version: $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
   # Everything except Biome, which has its own job below. Without this, shellcheck
   # and the config/hygiene validators only ever run on machines where someone
   # remembered `pre-commit install` — and `--no-verify` skips them there too.
@@ -58,40 +33,52 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.x"
-
-      - name: Cache pre-commit environments
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Install pre-commit
-        run: pip install pre-commit
+      - name: Set up toolchain
+        uses: jdx/mise-action@v4
 
       - name: Run hooks
-        # The biome hook shells out to `bun run check:fix`, which needs bun and an
-        # install; the dedicated Biome job below covers it without either.
+        # The biome hook shells out to `bun run check:fix`, which needs an install;
+        # the dedicated Biome job below covers it without one.
         env:
           SKIP: biome
         run: pre-commit run --all-files --show-diff-on-failure
 
+  # The commit-msg hook is skipped by `--no-verify`, and a malformed message
+  # corrupts the changelog and can mislead `cz bump`'s version inference.
+  commit-messages:
+    name: Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          # --rev-range needs the history, which the default shallow clone lacks.
+          fetch-depth: 0
+
+      - name: Set up commitizen
+        uses: jdx/mise-action@v4
+        with:
+          install_args: pipx:commitizen
+
+      # head.sha rather than HEAD: HEAD is the synthetic merge commit checkout
+      # creates for a PR, and its "Merge ... into ..." message is not conventional.
+      - name: Check commit messages
+        run: cz check --rev-range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+
   lint:
     name: Lint (Biome)
     runs-on: ubuntu-latest
-    needs: bun-version
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: jdx/mise-action@v4
         with:
-          bun-version: ${{ needs.bun-version.outputs.version }}
+          install_args: bun
 
       - name: Install dependencies
         run: bun install
@@ -102,16 +89,15 @@ jobs:
   unit:
     name: Unit Tests
     runs-on: ubuntu-latest
-    needs: bun-version
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: jdx/mise-action@v4
         with:
-          bun-version: ${{ needs.bun-version.outputs.version }}
+          install_args: bun
 
       - name: Install dependencies
         run: bun install
@@ -122,16 +108,15 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
-    needs: bun-version
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: jdx/mise-action@v4
         with:
-          bun-version: ${{ needs.bun-version.outputs.version }}
+          install_args: bun
 
       - name: Install dependencies
         run: bun install
@@ -142,16 +127,15 @@ jobs:
   build:
     name: Build Frontend Bundle
     runs-on: ubuntu-latest
-    needs: bun-version
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: jdx/mise-action@v4
         with:
-          bun-version: ${{ needs.bun-version.outputs.version }}
+          install_args: bun
 
       - name: Install dependencies
         run: bun install
