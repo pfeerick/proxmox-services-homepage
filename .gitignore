@@ -9,3 +9,6 @@ static/js/bundle.js
 
 # OS / editor
 .DS_Store
+
+# Local scratch notes/plans, not meant for the repo
+*.local.md
