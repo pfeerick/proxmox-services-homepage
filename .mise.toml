@@ -1,7 +1,7 @@
 # install.sh greps `^bun[[:space:]]*=`, so keep that key unquoted at column 0.
 [tools]
 bun = "1.4.0"
-"pipx:commitizen" = "4.17.0"
+"pipx:commitizen" = "4.18.0"
 "pipx:pre-commit" = "4.6.1"
 
 [tasks.setup]
