@@ -2,7 +2,7 @@
 [tools]
 bun = "1.4.0"
 "pipx:commitizen" = "4.17.0"
-"pipx:pre-commit" = "4.6.1"
+"pipx:pre-commit" = "4.6.2"
 
 [tasks.setup]
 description = "Install dependencies and git hooks"
